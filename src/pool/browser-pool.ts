@@ -10,9 +10,10 @@ import type { Browser } from 'puppeteer-core';
 
 puppeteer.use(StealthPlugin());
 
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { reportUsage } from '../billing/stripe.js';
 import { getStealthArgs, randomViewport, randomUserAgent } from '../stealth/stealth.js';
+import { profileExists, profileUserDataDir, touchProfile } from '../routes/profiles.js';
 
 function findChromeSync(): string {
   if (config.chromePath) return config.chromePath;
@@ -94,12 +95,21 @@ export class BrowserPool {
     const stealth = opts.stealth ?? config.STEALTH_DEFAULT;
     const viewport = opts.viewport ?? { width: 1280, height: 900 };
     const args = this.buildArgs(opts);
+    const userDataDir = opts.profileId ? profileUserDataDir(opts.profileId) : undefined;
+
+    if (opts.profileId) {
+      if (!profileExists(opts.profileId)) {
+        throw new Error(`Profile ${opts.profileId} not found`);
+      }
+      mkdirSync(userDataDir!, { recursive: true });
+    }
 
     const launchOpts = {
-      headless: true as const,
+      headless: opts.headless ?? true,
       args,
       executablePath: this.chromePath || undefined,
       defaultViewport: viewport,
+      userDataDir,
       timeout: 30_000,
     };
 
@@ -111,6 +121,7 @@ export class BrowserPool {
     }
 
     const cdpEndpoint = browser.wsEndpoint();
+    if (opts.profileId) touchProfile(opts.profileId);
 
     const session = new BrowserSession(id, browser, cdpEndpoint, opts, () => {
       this.releaseSession(id).catch(() => {});

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { BrowserPool } from '../pool/browser-pool.js';
-import type { CreateSessionRequest, ReleaseRequest } from '../types.js';
+import type { ControlSessionRequest, CreateSessionRequest, ReleaseRequest } from '../types.js';
 import { getOwnedSession } from '../utils/session-auth.js';
 
 export function sessionsRoutes(pool: BrowserPool): Hono {
@@ -46,6 +46,24 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
     const released = await pool.releaseSession(c.req.param('id'));
     if (!released) return c.json({ error: 'Session not found' }, 404);
     return c.json({ released: true });
+  });
+
+  // Switch between agent automation, human takeover, and paused control.
+  app.post('/:id/control', async (c) => {
+    const apiKey = c.req.header('x-api-key');
+    let session;
+    try { session = getOwnedSession(pool, c.req.param('id'), apiKey); }
+    catch (e: any) { return c.json({ error: e.message }, e.status ?? 404); }
+
+    const body = await c.req.json<ControlSessionRequest>().catch(() => ({} as ControlSessionRequest));
+    if (body.controlMode && !['agent', 'human', 'paused'].includes(body.controlMode)) {
+      return c.json({ error: 'controlMode must be agent, human, or paused' }, 400);
+    }
+
+    if (body.controlMode) session.setControl(body.controlMode, body.reason);
+    if (body.sensitiveMode !== undefined) session.setSensitiveMode(Boolean(body.sensitiveMode));
+
+    return c.json(session.toApiObject());
   });
 
   // Release all or batch (only caller's sessions)
@@ -103,9 +121,8 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
         liveInterval = setInterval(async () => {
           if (!liveRunning) return;
           try {
-            const page = await session.getPage();
-            const screenshot = await page.screenshot({ encoding: 'base64', type: 'jpeg', quality: 50 });
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ screenshot })}\n\n`));
+            const snapshot = await session.getSnapshot({ includeScreenshot: true, quality: 50 });
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(snapshot)}\n\n`));
           } catch {
             liveRunning = false;
             clearInterval(liveInterval);
@@ -125,6 +142,50 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
         liveRunning = false;
         if (liveInterval) clearInterval(liveInterval);
         if (liveTimeout) clearTimeout(liveTimeout);
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
+  });
+
+  // Operator event stream: metadata every second, screenshot unless sensitive mode is active.
+  app.get('/:id/events', async (c) => {
+    const apiKey = c.req.header('x-api-key');
+    let session;
+    try { session = getOwnedSession(pool, c.req.param('id'), apiKey); }
+    catch (e: any) { return c.json({ error: e.message }, e.status ?? 404); }
+
+    let interval: ReturnType<typeof setInterval> | undefined;
+    let closed = false;
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        const close = () => {
+          if (!closed) {
+            closed = true;
+            controller.close();
+          }
+        };
+
+        interval = setInterval(async () => {
+          try {
+            const snapshot = await session.getSnapshot({ includeScreenshot: true, quality: 45 });
+            controller.enqueue(encoder.encode(`event: snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`));
+          } catch {
+            if (interval) clearInterval(interval);
+            close();
+          }
+        }, 1000);
+      },
+      cancel() {
+        if (interval) clearInterval(interval);
       },
     });
 

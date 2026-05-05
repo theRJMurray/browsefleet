@@ -1,10 +1,16 @@
 import { Hono } from 'hono';
 import { v4 as uuid } from 'uuid';
-import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
 import { config } from '../config.js';
 import type { Profile, CreateProfileRequest } from '../types.js';
 
 const profilesDir = () => `${config.dataDir}/profiles`;
+export const profileDir = (id: string) => `${profilesDir()}/${id}`;
+export const profileUserDataDir = (id: string) => `${profileDir(id)}/chrome`;
+
+export function profileExists(id: string): boolean {
+  return UUID_RE.test(id) && existsSync(`${profileDir(id)}/meta.json`);
+}
 
 function getProfileMeta(id: string): Profile | null {
   const metaPath = `${profilesDir()}/${id}/meta.json`;
@@ -12,10 +18,19 @@ function getProfileMeta(id: string): Profile | null {
   return JSON.parse(readFileSync(metaPath, 'utf-8'));
 }
 
+export function touchProfile(id: string): void {
+  const profile = getProfileMeta(id);
+  if (!profile) return;
+  const now = new Date().toISOString();
+  writeFileSync(
+    `${profileDir(id)}/meta.json`,
+    JSON.stringify({ ...profile, lastUsedAt: now, updatedAt: now }, null, 2),
+  );
+}
+
 function listProfiles(): Profile[] {
   const dir = profilesDir();
   if (!existsSync(dir)) return [];
-  const { readdirSync } = require('node:fs');
   const entries = readdirSync(dir, { withFileTypes: true });
   return entries
     .filter((e: any) => e.isDirectory())
@@ -34,10 +49,11 @@ export function profilesRoutes(): Hono {
 
     const id = uuid();
     const now = new Date().toISOString();
-    const profile: Profile = { id, name: body.name, createdAt: now, updatedAt: now };
+    const profile: Profile = { id, name: body.name, provider: body.provider, createdAt: now, updatedAt: now };
 
-    const dir = `${profilesDir()}/${id}`;
+    const dir = profileDir(id);
     mkdirSync(dir, { recursive: true });
+    mkdirSync(profileUserDataDir(id), { recursive: true });
     writeFileSync(`${dir}/meta.json`, JSON.stringify(profile, null, 2));
     writeFileSync(`${dir}/cookies.json`, '[]');
     writeFileSync(`${dir}/localStorage.json`, '{}');
@@ -60,7 +76,7 @@ export function profilesRoutes(): Hono {
   app.delete('/:id', (c) => {
     const id = c.req.param('id');
     if (!UUID_RE.test(id)) return c.json({ error: 'Invalid profile ID' }, 400);
-    const dir = `${profilesDir()}/${id}`;
+    const dir = profileDir(id);
     if (!existsSync(dir)) return c.json({ error: 'Profile not found' }, 404);
     rmSync(dir, { recursive: true });
     return c.json({ deleted: true });

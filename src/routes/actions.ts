@@ -16,6 +16,12 @@ export function actionsRoutes(pool: BrowserPool): Hono {
     const body = await c.req.json<ActionRequest>().catch(() => null);
     if (!body?.actions?.length) return c.json({ error: 'actions array is required' }, 400);
 
+    const hasInputAction = body.actions.some((action) => action.type !== 'screenshot' && action.type !== 'wait');
+    if (hasInputAction) {
+      try { session.assertAgentControl(); }
+      catch (e: any) { return c.json({ error: e.message }, e.status ?? 423); }
+    }
+
     const page = await session.getPage();
     const results: ActionResponse['results'] = [];
 
@@ -23,6 +29,10 @@ export function actionsRoutes(pool: BrowserPool): Hono {
       try {
         switch (action.type) {
           case 'screenshot': {
+            if (session.sensitiveMode) {
+              results.push({ type: 'screenshot', success: false, error: 'Screenshot suppressed while sensitive mode is enabled' });
+              break;
+            }
             const ss = await page.screenshot({ encoding: 'base64', type: 'png' });
             results.push({ type: 'screenshot', success: true, screenshot: ss as string });
             break;
@@ -32,27 +42,27 @@ export function actionsRoutes(pool: BrowserPool): Hono {
               button: action.button ?? 'left',
               clickCount: action.clickCount ?? 1,
             });
-            const ss = await page.screenshot({ encoding: 'base64', type: 'png' });
-            results.push({ type: 'click', success: true, screenshot: ss as string });
+            const ss = session.sensitiveMode ? undefined : await page.screenshot({ encoding: 'base64', type: 'png' }) as string;
+            results.push({ type: 'click', success: true, screenshot: ss });
             break;
           }
           case 'type': {
             await page.keyboard.type(action.text, { delay: 30 });
-            const ss = await page.screenshot({ encoding: 'base64', type: 'png' });
-            results.push({ type: 'type', success: true, screenshot: ss as string });
+            const ss = session.sensitiveMode ? undefined : await page.screenshot({ encoding: 'base64', type: 'png' }) as string;
+            results.push({ type: 'type', success: true, screenshot: ss });
             break;
           }
           case 'press_key': {
             await page.keyboard.press(action.key as any);
-            const ss = await page.screenshot({ encoding: 'base64', type: 'png' });
-            results.push({ type: 'press_key', success: true, screenshot: ss as string });
+            const ss = session.sensitiveMode ? undefined : await page.screenshot({ encoding: 'base64', type: 'png' }) as string;
+            results.push({ type: 'press_key', success: true, screenshot: ss });
             break;
           }
           case 'scroll': {
             await page.mouse.wheel({ deltaX: action.deltaX ?? 0, deltaY: action.deltaY ?? 0 });
             await new Promise(r => setTimeout(r, 500));
-            const ss = await page.screenshot({ encoding: 'base64', type: 'png' });
-            results.push({ type: 'scroll', success: true, screenshot: ss as string });
+            const ss = session.sensitiveMode ? undefined : await page.screenshot({ encoding: 'base64', type: 'png' }) as string;
+            results.push({ type: 'scroll', success: true, screenshot: ss });
             break;
           }
           case 'move_mouse': {
@@ -68,8 +78,8 @@ export function actionsRoutes(pool: BrowserPool): Hono {
           case 'navigate': {
             await validateUrl(action.url);
             await page.goto(action.url, { waitUntil: 'networkidle2', timeout: 30_000 });
-            const ss = await page.screenshot({ encoding: 'base64', type: 'png' });
-            results.push({ type: 'navigate', success: true, screenshot: ss as string });
+            const ss = session.sensitiveMode ? undefined : await page.screenshot({ encoding: 'base64', type: 'png' }) as string;
+            results.push({ type: 'navigate', success: true, screenshot: ss });
             break;
           }
           default:

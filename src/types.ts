@@ -4,10 +4,13 @@ export interface CreateSessionRequest {
   sessionId?: string;
   proxyUrl?: string;
   stealth?: 'none' | 'basic' | 'full';
+  headless?: boolean;
   userAgent?: string;
   viewport?: { width: number; height: number };
   timeout?: number;
   profileId?: string;
+  operatorMode?: boolean;
+  sensitiveMode?: boolean;
   blockAds?: boolean;
   cookies?: Array<{ name: string; value: string; domain: string; path?: string }>;
   timezone?: string;
@@ -15,11 +18,14 @@ export interface CreateSessionRequest {
   headers?: Record<string, string>;
 }
 
+export type SessionControlMode = 'agent' | 'human' | 'paused';
+
 export interface Session {
   id: string;
   status: 'active' | 'released' | 'expired' | 'error';
   websocketUrl: string;
   viewerUrl: string;
+  eventsUrl: string;
   createdAt: string;
   expiresAt: string;
   timeout: number;
@@ -27,10 +33,21 @@ export interface Session {
   stealth: string;
   viewport: { width: number; height: number };
   profileId?: string;
+  operatorMode: boolean;
+  controlMode: SessionControlMode;
+  sensitiveMode: boolean;
+  currentUrl?: string;
+  title?: string;
 }
 
 export interface ReleaseRequest {
   ids?: string[];
+}
+
+export interface ControlSessionRequest {
+  controlMode?: SessionControlMode;
+  sensitiveMode?: boolean;
+  reason?: string;
 }
 
 // ─── Quick Action Types ────────────────────────────────────────────────────
@@ -128,12 +145,15 @@ export interface CaptchaSolveResponse {
 export interface Profile {
   id: string;
   name: string;
+  provider?: string;
   createdAt: string;
   updatedAt: string;
+  lastUsedAt?: string;
 }
 
 export interface CreateProfileRequest {
   name: string;
+  provider?: string;
 }
 
 // ─── Agent Types ──────────────────────────────────────────────────────────
