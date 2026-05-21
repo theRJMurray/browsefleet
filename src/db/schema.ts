@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { config } from '../config.js';
-import { logger } from '../server.js';
+import { logger } from '../logger.js';
 
 let db: Database.Database | null = null;
 

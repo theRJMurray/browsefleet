@@ -15,7 +15,7 @@ export function scrapeRoutes(pool: BrowserPool): Hono {
       await validateUrl(body.url);
       const result = await pool.withEphemeralContext(async (page) => {
         if (body.cookies?.length) {
-          await page.setCookie(...body.cookies.map(ck => ({ ...ck, path: '/' })));
+          await page.setCookie(...body.cookies.map((ck) => ({ ...ck, path: '/' })));
         }
         if (body.headers) {
           await page.setExtraHTTPHeaders(body.headers);
@@ -29,7 +29,7 @@ export function scrapeRoutes(pool: BrowserPool): Hono {
         if (typeof body.waitFor === 'string') {
           await page.waitForSelector(body.waitFor, { timeout: 10_000 }).catch(() => {});
         } else if (typeof body.waitFor === 'number') {
-          await new Promise(r => setTimeout(r, Math.min(body.waitFor as number, 30_000)));
+          await new Promise((r) => setTimeout(r, Math.min(body.waitFor as number, 30_000)));
         }
 
         const html = await page.content();

@@ -31,27 +31,27 @@ Single Node.js process managing Chrome child processes via puppeteer-core/puppet
 
 ## API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| POST | `/v1/sessions` | Create browser session |
-| GET | `/v1/sessions` | List active sessions |
-| GET | `/v1/sessions/:id` | Get session details |
-| POST | `/v1/sessions/:id/control` | Switch agent/human/paused control + sensitive mode |
-| POST | `/v1/sessions/:id/release` | Release session |
-| POST | `/v1/sessions/release` | Release all/batch |
-| WS | `/cdp/:sessionId` | CDP WebSocket proxy |
-| POST | `/v1/scrape` | Scrape URL → HTML/markdown/text |
-| POST | `/v1/screenshot` | Screenshot URL → PNG/JPEG |
-| POST | `/v1/pdf` | PDF from URL |
-| POST | `/v1/sessions/:id/actions` | Computer API (click/type/scroll) |
-| POST | `/v1/sessions/:id/captcha/solve` | Solve CAPTCHA via 2captcha |
-| CRUD | `/v1/profiles` | Browser profile management |
-| POST | `/v1/sessions/:id/files` | Upload file to session |
-| GET | `/v1/sessions/:id/files/:name` | Download file from session |
-| GET | `/v1/sessions/:id/live` | SSE live session viewer |
-| GET | `/v1/sessions/:id/events` | SSE operator stream with URL/title/control/screenshot |
-| GET | `/v1/usage` | Usage statistics |
+| Method | Path                             | Description                                           |
+| ------ | -------------------------------- | ----------------------------------------------------- |
+| GET    | `/health`                        | Health check                                          |
+| POST   | `/v1/sessions`                   | Create browser session                                |
+| GET    | `/v1/sessions`                   | List active sessions                                  |
+| GET    | `/v1/sessions/:id`               | Get session details                                   |
+| POST   | `/v1/sessions/:id/control`       | Switch agent/human/paused control + sensitive mode    |
+| POST   | `/v1/sessions/:id/release`       | Release session                                       |
+| POST   | `/v1/sessions/release`           | Release all/batch                                     |
+| WS     | `/cdp/:sessionId`                | CDP WebSocket proxy                                   |
+| POST   | `/v1/scrape`                     | Scrape URL → HTML/markdown/text                       |
+| POST   | `/v1/screenshot`                 | Screenshot URL → PNG/JPEG                             |
+| POST   | `/v1/pdf`                        | PDF from URL                                          |
+| POST   | `/v1/sessions/:id/actions`       | Computer API (click/type/scroll)                      |
+| POST   | `/v1/sessions/:id/captcha/solve` | Solve CAPTCHA via 2captcha                            |
+| CRUD   | `/v1/profiles`                   | Browser profile management                            |
+| POST   | `/v1/sessions/:id/files`         | Upload file to session                                |
+| GET    | `/v1/sessions/:id/files/:name`   | Download file from session                            |
+| GET    | `/v1/sessions/:id/live`          | SSE live session viewer                               |
+| GET    | `/v1/sessions/:id/events`        | SSE operator stream with URL/title/control/screenshot |
+| GET    | `/v1/usage`                      | Usage statistics                                      |
 
 ## Operator Mode
 
@@ -100,6 +100,7 @@ Screenshot actions and event streams stay available unless `sensitiveMode` is en
 ## Environment Variables
 
 See `.env.example` for all options. Key ones:
+
 - `API_KEYS`, comma-separated API keys (empty = no auth)
 - `MAX_CONCURRENT_SESSIONS`, default 30
 - `STEALTH_DEFAULT`, none/basic/full (default: full)

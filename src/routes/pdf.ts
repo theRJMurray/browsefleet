@@ -21,7 +21,7 @@ export function pdfRoutes(pool: BrowserPool): Hono {
         if (typeof body.waitFor === 'string') {
           await page.waitForSelector(body.waitFor, { timeout: 10_000 }).catch(() => {});
         } else if (typeof body.waitFor === 'number') {
-          await new Promise(r => setTimeout(r, Math.min(body.waitFor as number, 30_000)));
+          await new Promise((r) => setTimeout(r, Math.min(body.waitFor as number, 30_000)));
         }
 
         const buf = await page.pdf({
@@ -34,7 +34,10 @@ export function pdfRoutes(pool: BrowserPool): Hono {
       });
 
       return new Response(result, {
-        headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline; filename="page.pdf"' },
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'inline; filename="page.pdf"',
+        },
       });
     } catch (err: any) {
       return c.json({ error: err.message }, 500);

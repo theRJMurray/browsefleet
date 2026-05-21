@@ -4,7 +4,7 @@ import * as puppeteerCore from 'puppeteer-core';
 import { v4 as uuid } from 'uuid';
 import { BrowserSession } from './session.js';
 import { config } from '../config.js';
-import { logger } from '../server.js';
+import { logger } from '../logger.js';
 import type { CreateSessionRequest } from '../types.js';
 import type { Browser } from 'puppeteer-core';
 
@@ -17,20 +17,21 @@ import { profileExists, profileUserDataDir, touchProfile } from '../routes/profi
 function findChromeSync(): string {
   if (config.chromePath) return config.chromePath;
 
-  const candidates = process.platform === 'win32'
-    ? [
-        'C:/Program Files/Google/Chrome/Application/chrome.exe',
-        'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-        `${process.env.LOCALAPPDATA}/Google/Chrome/Application/chrome.exe`,
-        `${process.env.LOCALAPPDATA}/Chromium/Application/chrome.exe`,
-      ]
-    : [
-        '/usr/bin/chromium',
-        '/usr/bin/chromium-browser',
-        '/usr/bin/google-chrome',
-        '/usr/bin/google-chrome-stable',
-        '/snap/bin/chromium',
-      ];
+  const candidates =
+    process.platform === 'win32'
+      ? [
+          'C:/Program Files/Google/Chrome/Application/chrome.exe',
+          'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
+          `${process.env.LOCALAPPDATA}/Google/Chrome/Application/chrome.exe`,
+          `${process.env.LOCALAPPDATA}/Chromium/Application/chrome.exe`,
+        ]
+      : [
+          '/usr/bin/chromium',
+          '/usr/bin/chromium-browser',
+          '/usr/bin/google-chrome',
+          '/usr/bin/google-chrome-stable',
+          '/snap/bin/chromium',
+        ];
 
   for (const p of candidates) {
     if (existsSync(p)) return p;
@@ -74,7 +75,9 @@ export class BrowserPool {
 
     if (opts.blockAds) {
       // Basic ad blocking via Chrome flag
-      args.push('--host-resolver-rules=MAP *.doubleclick.net 0.0.0.0, MAP *.googlesyndication.com 0.0.0.0');
+      args.push(
+        '--host-resolver-rules=MAP *.doubleclick.net 0.0.0.0, MAP *.googlesyndication.com 0.0.0.0',
+      );
     }
 
     return args;
@@ -122,9 +125,16 @@ export class BrowserPool {
     const cdpEndpoint = browser.wsEndpoint();
     if (opts.profileId) touchProfile(opts.profileId);
 
-    const session = new BrowserSession(id, browser, cdpEndpoint, opts, () => {
-      this.releaseSession(id).catch(() => {});
-    }, apiKey);
+    const session = new BrowserSession(
+      id,
+      browser,
+      cdpEndpoint,
+      opts,
+      () => {
+        this.releaseSession(id).catch(() => {});
+      },
+      apiKey,
+    );
 
     // Apply stealth fingerprinting when stealth is 'full'
     if (stealth === 'full') {
@@ -152,12 +162,14 @@ export class BrowserPool {
     // Inject cookies if provided
     if (opts.cookies && opts.cookies.length > 0) {
       const page = await session.getPage();
-      await page.setCookie(...opts.cookies.map(c => ({
-        name: c.name,
-        value: c.value,
-        domain: c.domain,
-        path: c.path ?? '/',
-      })));
+      await page.setCookie(
+        ...opts.cookies.map((c) => ({
+          name: c.name,
+          value: c.value,
+          domain: c.domain,
+          path: c.path ?? '/',
+        })),
+      );
     }
 
     this.sessions.set(id, session);
@@ -183,8 +195,12 @@ export class BrowserPool {
     this.sessions.delete(id);
 
     // Clean up temporary upload/download directories
-    try { rmSync(`/tmp/bf-uploads-${id}`, { recursive: true, force: true }); } catch {}
-    try { rmSync(`/tmp/bf-downloads-${id}`, { recursive: true, force: true }); } catch {}
+    try {
+      rmSync(`/tmp/bf-uploads-${id}`, { recursive: true, force: true });
+    } catch {}
+    try {
+      rmSync(`/tmp/bf-downloads-${id}`, { recursive: true, force: true });
+    } catch {}
 
     logger.info({ sessionId: id, browserHours: browserHours.toFixed(4) }, 'Session released');
 

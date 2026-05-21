@@ -1,0 +1,16 @@
+# Canonical line endings: LF on disk in the repo, regardless of OS.
+# Prevents Prettier --check from failing on Windows clones with core.autocrlf=true.
+
+* text=auto eol=lf
+
+# Binary files git should not touch
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary

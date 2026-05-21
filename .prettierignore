@@ -1,0 +1,10 @@
+dist/
+node_modules/
+data/
+coverage/
+package-lock.json
+examples/**/node_modules/
+examples/**/package-lock.json
+examples/**/dist/
+docs/assets/
+CHANGELOG.md

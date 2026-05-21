@@ -25,7 +25,7 @@ export function screenshotRoutes(pool: BrowserPool): Hono {
         if (typeof body.waitFor === 'string') {
           await page.waitForSelector(body.waitFor, { timeout: 10_000 }).catch(() => {});
         } else if (typeof body.waitFor === 'number') {
-          await new Promise(r => setTimeout(r, Math.min(body.waitFor as number, 30_000)));
+          await new Promise((r) => setTimeout(r, Math.min(body.waitFor as number, 30_000)));
         }
 
         const format = body.format ?? 'png';
@@ -44,10 +44,14 @@ export function screenshotRoutes(pool: BrowserPool): Hono {
 
       const accept = c.req.header('accept') ?? '';
       if (accept.includes('application/json')) {
-        return c.json({ screenshot: Buffer.from(result).toString('base64'), format: body.format ?? 'png' });
+        return c.json({
+          screenshot: Buffer.from(result).toString('base64'),
+          format: body.format ?? 'png',
+        });
       }
 
-      const mime = body.format === 'jpeg' ? 'image/jpeg' : body.format === 'webp' ? 'image/webp' : 'image/png';
+      const mime =
+        body.format === 'jpeg' ? 'image/jpeg' : body.format === 'webp' ? 'image/webp' : 'image/png';
       return new Response(Buffer.from(result), { headers: { 'Content-Type': mime } });
     } catch (err: any) {
       return c.json({ error: err.message }, 500);

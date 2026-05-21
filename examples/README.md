@@ -2,13 +2,13 @@
 
 Runnable examples for the most common BrowseFleet flows. Each subdirectory is a standalone project with its own README.
 
-| Example | Language | Demonstrates |
-|---------|----------|--------------|
-| [`curl/`](./curl/) | shell | Health, scrape, screenshot, PDF, session lifecycle. Fastest way to get a feel for the API. |
-| [`node-quickstart/`](./node-quickstart/) | TypeScript | One-shot endpoints (`/scrape`, `/screenshot`) plus an explicit session with the `/actions` Computer API. |
-| [`python-quickstart/`](./python-quickstart/) | Python | Same flows from Python, via httpx. |
-| [`operator-mode/`](./operator-mode/) | TypeScript | Human-to-agent handoff using profile persistence + the control state machine. |
-| [`cdp-direct/`](./cdp-direct/) | TypeScript | Bypass the high-level endpoints and drive Chrome over CDP via the WebSocket proxy. |
+| Example                                      | Language   | Demonstrates                                                                                             |
+| -------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------- |
+| [`curl/`](./curl/)                           | shell      | Health, scrape, screenshot, PDF, session lifecycle. Fastest way to get a feel for the API.               |
+| [`node-quickstart/`](./node-quickstart/)     | TypeScript | One-shot endpoints (`/scrape`, `/screenshot`) plus an explicit session with the `/actions` Computer API. |
+| [`python-quickstart/`](./python-quickstart/) | Python     | Same flows from Python, via httpx.                                                                       |
+| [`operator-mode/`](./operator-mode/)         | TypeScript | Human-to-agent handoff using profile persistence + the control state machine.                            |
+| [`cdp-direct/`](./cdp-direct/)               | TypeScript | Bypass the high-level endpoints and drive Chrome over CDP via the WebSocket proxy.                       |
 
 ## Running the examples
 

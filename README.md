@@ -111,11 +111,11 @@ Full examples in [`examples/`](./examples/): `curl/`, `node-quickstart/`, `pytho
 
 Three recipes in [`docs/deployment.md`](./docs/deployment.md):
 
-| Host | Cost | Concurrent sessions |
-|------|------|---------------------|
-| Hetzner CX22 + docker-compose | ~$4/mo | ~10 |
-| Fly.io single machine | ~$15/mo | ~20 |
-| AWS ECS Fargate (1 task) | ~$30/mo | ~25 |
+| Host                          | Cost    | Concurrent sessions |
+| ----------------------------- | ------- | ------------------- |
+| Hetzner CX22 + docker-compose | ~$4/mo  | ~10                 |
+| Fly.io single machine         | ~$15/mo | ~20                 |
+| AWS ECS Fargate (1 task)      | ~$30/mo | ~25                 |
 
 All three are copy-paste deployable. Chrome wants roughly 200 to 500 MB of RAM per active stealth session.
 

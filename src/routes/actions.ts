@@ -10,16 +10,24 @@ export function actionsRoutes(pool: BrowserPool): Hono {
   app.post('/:id/actions', async (c) => {
     const apiKey = c.req.header('x-api-key');
     let session;
-    try { session = getOwnedSession(pool, c.req.param('id'), apiKey); }
-    catch (e: any) { return c.json({ error: e.message }, e.status ?? 404); }
+    try {
+      session = getOwnedSession(pool, c.req.param('id'), apiKey);
+    } catch (e: any) {
+      return c.json({ error: e.message }, e.status ?? 404);
+    }
 
     const body = await c.req.json<ActionRequest>().catch(() => null);
     if (!body?.actions?.length) return c.json({ error: 'actions array is required' }, 400);
 
-    const hasInputAction = body.actions.some((action) => action.type !== 'screenshot' && action.type !== 'wait');
+    const hasInputAction = body.actions.some(
+      (action) => action.type !== 'screenshot' && action.type !== 'wait',
+    );
     if (hasInputAction) {
-      try { session.assertAgentControl(); }
-      catch (e: any) { return c.json({ error: e.message }, e.status ?? 423); }
+      try {
+        session.assertAgentControl();
+      } catch (e: any) {
+        return c.json({ error: e.message }, e.status ?? 423);
+      }
     }
 
     const page = await session.getPage();
@@ -30,7 +38,11 @@ export function actionsRoutes(pool: BrowserPool): Hono {
         switch (action.type) {
           case 'screenshot': {
             if (session.sensitiveMode) {
-              results.push({ type: 'screenshot', success: false, error: 'Screenshot suppressed while sensitive mode is enabled' });
+              results.push({
+                type: 'screenshot',
+                success: false,
+                error: 'Screenshot suppressed while sensitive mode is enabled',
+              });
               break;
             }
             const ss = await page.screenshot({ encoding: 'base64', type: 'png' });
@@ -42,26 +54,34 @@ export function actionsRoutes(pool: BrowserPool): Hono {
               button: action.button ?? 'left',
               clickCount: action.clickCount ?? 1,
             });
-            const ss = session.sensitiveMode ? undefined : await page.screenshot({ encoding: 'base64', type: 'png' }) as string;
+            const ss = session.sensitiveMode
+              ? undefined
+              : ((await page.screenshot({ encoding: 'base64', type: 'png' })) as string);
             results.push({ type: 'click', success: true, screenshot: ss });
             break;
           }
           case 'type': {
             await page.keyboard.type(action.text, { delay: 30 });
-            const ss = session.sensitiveMode ? undefined : await page.screenshot({ encoding: 'base64', type: 'png' }) as string;
+            const ss = session.sensitiveMode
+              ? undefined
+              : ((await page.screenshot({ encoding: 'base64', type: 'png' })) as string);
             results.push({ type: 'type', success: true, screenshot: ss });
             break;
           }
           case 'press_key': {
             await page.keyboard.press(action.key as any);
-            const ss = session.sensitiveMode ? undefined : await page.screenshot({ encoding: 'base64', type: 'png' }) as string;
+            const ss = session.sensitiveMode
+              ? undefined
+              : ((await page.screenshot({ encoding: 'base64', type: 'png' })) as string);
             results.push({ type: 'press_key', success: true, screenshot: ss });
             break;
           }
           case 'scroll': {
             await page.mouse.wheel({ deltaX: action.deltaX ?? 0, deltaY: action.deltaY ?? 0 });
-            await new Promise(r => setTimeout(r, 500));
-            const ss = session.sensitiveMode ? undefined : await page.screenshot({ encoding: 'base64', type: 'png' }) as string;
+            await new Promise((r) => setTimeout(r, 500));
+            const ss = session.sensitiveMode
+              ? undefined
+              : ((await page.screenshot({ encoding: 'base64', type: 'png' })) as string);
             results.push({ type: 'scroll', success: true, screenshot: ss });
             break;
           }
@@ -71,19 +91,25 @@ export function actionsRoutes(pool: BrowserPool): Hono {
             break;
           }
           case 'wait': {
-            await new Promise(r => setTimeout(r, Math.min(action.duration, 30_000)));
+            await new Promise((r) => setTimeout(r, Math.min(action.duration, 30_000)));
             results.push({ type: 'wait', success: true });
             break;
           }
           case 'navigate': {
             await validateUrl(action.url);
             await page.goto(action.url, { waitUntil: 'networkidle2', timeout: 30_000 });
-            const ss = session.sensitiveMode ? undefined : await page.screenshot({ encoding: 'base64', type: 'png' }) as string;
+            const ss = session.sensitiveMode
+              ? undefined
+              : ((await page.screenshot({ encoding: 'base64', type: 'png' })) as string);
             results.push({ type: 'navigate', success: true, screenshot: ss });
             break;
           }
           default:
-            results.push({ type: (action as any).type, success: false, error: 'Unknown action type' });
+            results.push({
+              type: (action as any).type,
+              success: false,
+              error: 'Unknown action type',
+            });
         }
       } catch (err: any) {
         results.push({ type: action.type, success: false, error: err.message });

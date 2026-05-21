@@ -28,11 +28,12 @@ async function main() {
   console.log('  Profile id:', profile.id);
 
   console.log('\nStep 2: Start an operator-mode session attached to the profile');
-  const session = await call<{ id: string; viewerUrl: string; eventsUrl: string; controlMode: string }>(
-    'POST',
-    '/v1/sessions',
-    { profileId: profile.id, operatorMode: true, stealth: 'full' },
-  );
+  const session = await call<{
+    id: string;
+    viewerUrl: string;
+    eventsUrl: string;
+    controlMode: string;
+  }>('POST', '/v1/sessions', { profileId: profile.id, operatorMode: true, stealth: 'full' });
   console.log('  Session id:', session.id);
   console.log('  Control mode:', session.controlMode);
   // viewerUrl / eventsUrl are absolute URLs computed by the server from CDP_EXTERNAL_*.
@@ -40,7 +41,9 @@ async function main() {
   console.log(`  Event stream: ${session.eventsUrl}`);
 
   console.log('\nStep 3: Drive the browser as a human via the live viewer.');
-  console.log('       Open the live viewer URL above in a browser and interact through your own UI');
+  console.log(
+    '       Open the live viewer URL above in a browser and interact through your own UI',
+  );
   console.log('       (or post actions directly to /v1/sessions/<id>/actions from another tool).');
   console.log('       When done, type "done" here and press Enter to hand off to the agent.\n');
 
@@ -62,22 +65,21 @@ async function main() {
   console.log('\nStep 5: Run a navigate + screenshot batch (proves agent input is unlocked)');
   // `navigate` is gated by control mode; under `human` or `paused` this whole
   // batch would have returned 423 Locked. Under `agent` it executes.
-  const actions = await call<{ results: Array<{ type: string; success: boolean; screenshot?: string }> }>(
-    'POST',
-    `/v1/sessions/${session.id}/actions`,
-    {
-      actions: [
-        { type: 'navigate', url: 'https://example.com' },
-        { type: 'screenshot' },
-      ],
-    },
-  );
-  console.log('  Results:', actions.results.map(r => `${r.type}=${r.success}`).join(', '));
+  const actions = await call<{
+    results: Array<{ type: string; success: boolean; screenshot?: string }>;
+  }>('POST', `/v1/sessions/${session.id}/actions`, {
+    actions: [{ type: 'navigate', url: 'https://example.com' }, { type: 'screenshot' }],
+  });
+  console.log('  Results:', actions.results.map((r) => `${r.type}=${r.success}`).join(', '));
 
   console.log('\nStep 6: Release the session (profile persists)');
   await call('POST', `/v1/sessions/${session.id}/release`);
   console.log('  Released.');
-  console.log('\nNext time, create a session with profileId:', profile.id, 'and skip the human step.');
+  console.log(
+    '\nNext time, create a session with profileId:',
+    profile.id,
+    'and skip the human step.',
+  );
 }
 
 main().catch((err) => {

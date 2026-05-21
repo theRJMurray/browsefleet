@@ -38,8 +38,18 @@ The server creates a one-shot session, runs the agent against it, releases the s
   "success": true,
   "result": "The most expensive item is the Premium Bundle at $499.",
   "steps": [
-    { "iteration": 1, "reasoning": "I see a product grid. Let me scroll to find the highest price.", "actions": [{"type":"screenshot"}, {"type":"scroll","deltaY":500}], "screenshot": "data:image/png;base64,..." },
-    { "iteration": 2, "reasoning": "The Premium Bundle at $499 appears to be the highest.", "actions": [{"type":"screenshot"}], "screenshot": "data:image/png;base64,..." }
+    {
+      "iteration": 1,
+      "reasoning": "I see a product grid. Let me scroll to find the highest price.",
+      "actions": [{ "type": "screenshot" }, { "type": "scroll", "deltaY": 500 }],
+      "screenshot": "data:image/png;base64,..."
+    },
+    {
+      "iteration": 2,
+      "reasoning": "The Premium Bundle at $499 appears to be the highest.",
+      "actions": [{ "type": "screenshot" }],
+      "screenshot": "data:image/png;base64,..."
+    }
   ],
   "totalIterations": 2
 }
@@ -62,10 +72,10 @@ The agent operates on the existing page. The session must be in `controlMode: "a
 
 ## Providers and models
 
-| `provider` | Default `model` (server) | Env var required |
-|------------|--------------------------|------------------|
+| `provider`            | Default `model` (server)                                                               | Env var required    |
+| --------------------- | -------------------------------------------------------------------------------------- | ------------------- |
 | `anthropic` (default) | a current Claude Sonnet snapshot, set in [`src/agent/agent.ts`](../src/agent/agent.ts) | `ANTHROPIC_API_KEY` |
-| `openai` | `gpt-4o` | `OPENAI_API_KEY` |
+| `openai`              | `gpt-4o`                                                                               | `OPENAI_API_KEY`    |
 
 The Anthropic default model id moves forward as new Sonnet versions ship; the source file is the contract. You can pass your own model id in the `model` field. The agent does not validate the id; if the upstream API rejects it, the error bubbles up.
 

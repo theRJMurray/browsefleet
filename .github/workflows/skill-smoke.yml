@@ -1,0 +1,58 @@
+name: skill.md smoke test
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+    paths:
+      - 'skill.md'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/**'
+      - '.github/workflows/skill-smoke.yml'
+
+concurrency:
+  group: skill-smoke-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  tldr:
+    name: skill.md TL;DR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Install Chromium for puppeteer-core
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends chromium
+
+      # The skill.md TL;DR uses `npm run dev` which is a long-running watcher.
+      # In CI we substitute the production equivalent (build + node dist/server.js)
+      # so the job can terminate. Everything else (env copy, install, health probe)
+      # mirrors the TL;DR verbatim. If you edit either, edit both.
+      - name: Run the skill.md TL;DR block (production-equivalent)
+        run: |
+          set -ex
+          cp .env.example .env
+          npm install
+          npm run build
+          NODE_ENV=production node dist/server.js &
+          SERVER_PID=$!
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS http://localhost:3000/health > /tmp/health.json; then break; fi
+            sleep 1
+          done
+          cat /tmp/health.json
+          test "$(jq -r .status /tmp/health.json)" = "ok"
+          kill $SERVER_PID

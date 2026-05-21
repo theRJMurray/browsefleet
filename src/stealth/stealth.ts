@@ -9,9 +9,7 @@ export type StealthLevel = 'none' | 'basic' | 'full';
 export function getStealthArgs(level: StealthLevel): string[] {
   if (level === 'none') return [];
 
-  const args = [
-    '--disable-blink-features=AutomationControlled',
-  ];
+  const args = ['--disable-blink-features=AutomationControlled'];
 
   if (level === 'full') {
     args.push(

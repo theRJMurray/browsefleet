@@ -51,22 +51,22 @@ curl -X POST localhost:3000/v1/sessions \
 
 Notable fields:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `stealth` | `'none' \| 'basic' \| 'full'` | Per-session override of `STEALTH_DEFAULT`. |
-| `headless` | `boolean` | Default `true`. `false` for local headed Chrome. |
-| `viewport` | `{ width, height }` | Default random within sane bounds. |
-| `userAgent` | `string` | Override the stealth-generated UA. |
-| `profileId` | `string` | Attach to a persistent profile (see [profiles](./profiles.md)). |
-| `operatorMode` | `boolean` | Start session in `human` control (see [operator mode](./operator-mode.md)). |
-| `sensitiveMode` | `boolean` | Suppress screenshots until cleared. |
-| `proxyUrl` | `string` | Per-session outbound proxy. |
-| `timezone` | `string` | IANA timezone, e.g. `America/Toronto`. |
-| `locale` | `string` | BCP 47 locale, e.g. `en-US`. |
-| `timeout` | `number` | Idle timeout in ms. Capped at `MAX_SESSION_TIMEOUT`. |
-| `cookies` | `Array<{ name, value, domain }>` | Pre-set cookies. |
-| `headers` | `Record<string, string>` | Extra HTTP headers on every navigation. |
-| `blockAds` | `boolean` | Filter common ad/tracker hosts. |
+| Field           | Type                             | Description                                                                 |
+| --------------- | -------------------------------- | --------------------------------------------------------------------------- |
+| `stealth`       | `'none' \| 'basic' \| 'full'`    | Per-session override of `STEALTH_DEFAULT`.                                  |
+| `headless`      | `boolean`                        | Default `true`. `false` for local headed Chrome.                            |
+| `viewport`      | `{ width, height }`              | Default random within sane bounds.                                          |
+| `userAgent`     | `string`                         | Override the stealth-generated UA.                                          |
+| `profileId`     | `string`                         | Attach to a persistent profile (see [profiles](./profiles.md)).             |
+| `operatorMode`  | `boolean`                        | Start session in `human` control (see [operator mode](./operator-mode.md)). |
+| `sensitiveMode` | `boolean`                        | Suppress screenshots until cleared.                                         |
+| `proxyUrl`      | `string`                         | Per-session outbound proxy.                                                 |
+| `timezone`      | `string`                         | IANA timezone, e.g. `America/Toronto`.                                      |
+| `locale`        | `string`                         | BCP 47 locale, e.g. `en-US`.                                                |
+| `timeout`       | `number`                         | Idle timeout in ms. Capped at `MAX_SESSION_TIMEOUT`.                        |
+| `cookies`       | `Array<{ name, value, domain }>` | Pre-set cookies.                                                            |
+| `headers`       | `Record<string, string>`         | Extra HTTP headers on every navigation.                                     |
+| `blockAds`      | `boolean`                        | Filter common ad/tracker hosts.                                             |
 
 Response: `201 Created` with the `Session` object.
 
@@ -310,24 +310,22 @@ Aggregate stats for the calling API key.
   "totalBrowserHours": 27.4,
   "todayBrowserHours": 1.2,
   "todayApiCalls": 89,
-  "daily": [
-    { "date": "2026-05-21", "sessions": 12, "browserHours": 1.2, "apiCalls": 89 }
-  ]
+  "daily": [{ "date": "2026-05-21", "sessions": 12, "browserHours": 1.2, "apiCalls": 89 }]
 }
 ```
 
 ## Error codes
 
-| Status | Meaning |
-|--------|---------|
-| 400 | Malformed request body or invalid field. |
-| 401 | Missing or invalid `x-api-key`. |
-| 403 | Session belongs to a different API key. |
-| 404 | Session, profile, or file not found. |
-| 423 | Session is in `human` or `paused` control; the requested action batch is locked. |
-| 429 | Rate limit hit, or `MAX_CONCURRENT_SESSIONS` reached. |
-| 500 | Unhandled server error. Check logs. |
-| 501 | Feature requires server configuration that is not set (e.g. `/captcha/solve` without `CAPTCHA_API_KEY`). |
+| Status | Meaning                                                                                                  |
+| ------ | -------------------------------------------------------------------------------------------------------- |
+| 400    | Malformed request body or invalid field.                                                                 |
+| 401    | Missing or invalid `x-api-key`.                                                                          |
+| 403    | Session belongs to a different API key.                                                                  |
+| 404    | Session, profile, or file not found.                                                                     |
+| 423    | Session is in `human` or `paused` control; the requested action batch is locked.                         |
+| 429    | Rate limit hit, or `MAX_CONCURRENT_SESSIONS` reached.                                                    |
+| 500    | Unhandled server error. Check logs.                                                                      |
+| 501    | Feature requires server configuration that is not set (e.g. `/captcha/solve` without `CAPTCHA_API_KEY`). |
 
 ## See also
 

@@ -9,11 +9,11 @@ Three production-grade deployment recipes for BrowseFleet. Pick the one that mat
 Chrome with `STEALTH_DEFAULT=full` wants 200 to 500 MB of RAM per active session under load. The Node process itself is ~150 MB.
 
 | Concurrent sessions | Recommended RAM | Recommended vCPU |
-|---------------------|-----------------|------------------|
-| 5 | 2 GB | 1 |
-| 10 | 4 GB | 2 |
-| 30 | 12 GB | 4 |
-| 50+ | 24 GB+ | 8+ |
+| ------------------- | --------------- | ---------------- |
+| 5                   | 2 GB            | 1                |
+| 10                  | 4 GB            | 2                |
+| 30                  | 12 GB           | 4                |
+| 50+                 | 24 GB+          | 8+               |
 
 Always run with `--shm-size=2g` (Docker) or ensure `/dev/shm` is at least 2 GB. Chrome crashes silently under memory pressure on the default 64 MB.
 
@@ -48,15 +48,15 @@ services:
     container_name: browsefleet
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3000:3000"   # bind to loopback, proxy with caddy or nginx
+      - '127.0.0.1:3000:3000' # bind to loopback, proxy with caddy or nginx
     shm_size: 2gb
     environment:
-      API_KEYS: "${BF_API_KEYS}"
-      MAX_CONCURRENT_SESSIONS: "10"
-      STEALTH_DEFAULT: "full"
-      LOG_LEVEL: "info"
-      CDP_EXTERNAL_HOST: "${BF_PUBLIC_HOST}"
-      CDP_EXTERNAL_SCHEME: "wss"
+      API_KEYS: '${BF_API_KEYS}'
+      MAX_CONCURRENT_SESSIONS: '10'
+      STEALTH_DEFAULT: 'full'
+      LOG_LEVEL: 'info'
+      CDP_EXTERNAL_HOST: '${BF_PUBLIC_HOST}'
+      CDP_EXTERNAL_SCHEME: 'wss'
     volumes:
       - browsefleet-data:/app/data
 volumes:
@@ -199,7 +199,10 @@ docker push <acct>.dkr.ecr.us-east-1.amazonaws.com/browsefleet:latest
         { "name": "LOG_LEVEL", "value": "info" }
       ],
       "secrets": [
-        { "name": "API_KEYS", "valueFrom": "arn:aws:secretsmanager:...:secret:browsefleet/api-keys" }
+        {
+          "name": "API_KEYS",
+          "valueFrom": "arn:aws:secretsmanager:...:secret:browsefleet/api-keys"
+        }
       ],
       "linuxParameters": {
         "sharedMemorySize": 2048
@@ -208,7 +211,10 @@ docker push <acct>.dkr.ecr.us-east-1.amazonaws.com/browsefleet:latest
     }
   ],
   "volumes": [
-    { "name": "browsefleet-data", "efsVolumeConfiguration": { "fileSystemId": "fs-...", "rootDirectory": "/" } }
+    {
+      "name": "browsefleet-data",
+      "efsVolumeConfiguration": { "fileSystemId": "fs-...", "rootDirectory": "/" }
+    }
   ]
 }
 ```

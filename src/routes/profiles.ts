@@ -49,7 +49,13 @@ export function profilesRoutes(): Hono {
 
     const id = uuid();
     const now = new Date().toISOString();
-    const profile: Profile = { id, name: body.name, provider: body.provider, createdAt: now, updatedAt: now };
+    const profile: Profile = {
+      id,
+      name: body.name,
+      provider: body.provider,
+      createdAt: now,
+      updatedAt: now,
+    };
 
     const dir = profileDir(id);
     mkdirSync(dir, { recursive: true });

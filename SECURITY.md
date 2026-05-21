@@ -4,10 +4,10 @@
 
 BrowseFleet is in active development. We support the latest minor release on the `master` branch. Security fixes for older releases are best-effort.
 
-| Version | Supported |
-|---------|-----------|
-| `0.x.x` (latest) | yes |
-| older | no |
+| Version          | Supported |
+| ---------------- | --------- |
+| `0.x.x` (latest) | yes       |
+| older            | no        |
 
 ## Reporting a vulnerability
 
@@ -26,12 +26,12 @@ If you would like to encrypt your report, request our PGP key in your initial em
 
 ## What to expect
 
-| Stage | Target response |
-|-------|-----------------|
-| Acknowledgement | within one business day |
-| Initial triage and severity classification | within five business days |
-| Mitigation plan or fix availability | depends on severity; tracked publicly only after a fix is shipped |
-| Public disclosure | coordinated with you; default 90 days from report or at release of the fix, whichever is sooner |
+| Stage                                      | Target response                                                                                 |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Acknowledgement                            | within one business day                                                                         |
+| Initial triage and severity classification | within five business days                                                                       |
+| Mitigation plan or fix availability        | depends on severity; tracked publicly only after a fix is shipped                               |
+| Public disclosure                          | coordinated with you; default 90 days from report or at release of the fix, whichever is sooner |
 
 ## Out of scope
 

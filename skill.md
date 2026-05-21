@@ -22,13 +22,13 @@ If any of those steps fail, jump to "Known failure modes" at the bottom of this 
 
 ## Required tools and versions
 
-| Tool | Minimum | Why |
-|------|---------|-----|
-| Node.js | 20.x (22.x recommended) | Runtime. Pinned in `.nvmrc`. ESM-only project, so 18.x and older will not work. |
-| npm | 10.x | Bundled with Node 20+. The lock file is npm v3 format. |
-| A system Chrome or Chromium | any recent | Used by puppeteer-core. If not on PATH, set `CHROME_PATH` in `.env`. |
-| Docker | 24+ (optional) | Only needed if you want to run the published container or build a local image. |
-| C/C++ build toolchain | any | `better-sqlite3` compiles native bindings on `npm install`. See "Known failure modes" for platform notes. |
+| Tool                        | Minimum                 | Why                                                                                                       |
+| --------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------- |
+| Node.js                     | 20.x (22.x recommended) | Runtime. Pinned in `.nvmrc`. ESM-only project, so 18.x and older will not work.                           |
+| npm                         | 10.x                    | Bundled with Node 20+. The lock file is npm v3 format.                                                    |
+| A system Chrome or Chromium | any recent              | Used by puppeteer-core. If not on PATH, set `CHROME_PATH` in `.env`.                                      |
+| Docker                      | 24+ (optional)          | Only needed if you want to run the published container or build a local image.                            |
+| C/C++ build toolchain       | any                     | `better-sqlite3` compiles native bindings on `npm install`. See "Known failure modes" for platform notes. |
 
 The project intentionally has no other runtime dependencies. No Redis, no Postgres, no external job queue. All state is SQLite at `./data/browsefleet.db`.
 
@@ -63,14 +63,14 @@ cp .env.example .env
 
 You do not need to fill anything in for a local dev run. The defaults work. The interesting variables are:
 
-| Variable | Default | When you would change it |
-|----------|---------|--------------------------|
-| `API_KEYS` | empty (no auth) | Set a comma-separated list once you expose the server beyond localhost. |
-| `MAX_CONCURRENT_SESSIONS` | 30 | Cap based on your host's RAM. Chrome with stealth wants ~2 GB per session. |
-| `STEALTH_DEFAULT` | `full` | Set to `none` or `basic` when scraping cooperative sites for less CPU overhead. |
-| `CHROME_PATH` | empty (auto-detect) | Set the absolute path to Chrome/Chromium if auto-detect fails. |
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | empty | Required only if you use the `/v1/agent` vision-based automation endpoint. |
-| `CAPTCHA_API_KEY` | empty | Required only if you use `/v1/sessions/:id/captcha/solve`. 2captcha is the current provider. |
+| Variable                               | Default             | When you would change it                                                                     |
+| -------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------- |
+| `API_KEYS`                             | empty (no auth)     | Set a comma-separated list once you expose the server beyond localhost.                      |
+| `MAX_CONCURRENT_SESSIONS`              | 30                  | Cap based on your host's RAM. Chrome with stealth wants ~2 GB per session.                   |
+| `STEALTH_DEFAULT`                      | `full`              | Set to `none` or `basic` when scraping cooperative sites for less CPU overhead.              |
+| `CHROME_PATH`                          | empty (auto-detect) | Set the absolute path to Chrome/Chromium if auto-detect fails.                               |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | empty               | Required only if you use the `/v1/agent` vision-based automation endpoint.                   |
+| `CAPTCHA_API_KEY`                      | empty               | Required only if you use `/v1/sessions/:id/captcha/solve`. 2captcha is the current provider. |
 
 The full list of env vars is in `.env.example`. There is no separate `config.json` or `config.yaml`.
 
@@ -183,10 +183,14 @@ browsefleet/
 ├── SECURITY.md
 ├── GOVERNANCE.md
 ├── CHANGELOG.md
-└── .github/                   # issue templates, PR template, CODEOWNERS, dependabot
+├── tests/                     # vitest suite (health, auth, url-validator, extract)
+├── eslint.config.js
+├── .prettierrc
+├── vitest.config.ts
+└── .github/                   # issue templates, PR template, CODEOWNERS, dependabot, CI workflows
 ```
 
-There is no `tests/` directory yet. Adding a test suite is part of Phase 3 of the OSS transformation arc. Until then, the smoke test above is the regression check.
+`tests/` holds the vitest suite. Phase 3 of the OSS transformation arc shipped 4 test files (health, auth, url-validator, extract). The smoke test in the TL;DR block remains the end-to-end regression check.
 
 ## Common tasks
 
@@ -228,28 +232,39 @@ There is no `tests/` directory yet. Adding a test suite is part of Phase 3 of th
 
 ## Testing
 
-No test suite yet. Phase 3 of the OSS transformation arc (tracked in `docs/projects/browsefleet-oss/specs/phases/phase-3-ci-releases.md` in the upstream Overlord repo) adds `vitest`, a `tests/` directory, and CI workflows. Until then, contributors run the smoke test by hand.
+```bash
+npm test              # run the vitest suite once
+npm run test:watch    # watch mode
+npm run test:coverage # with v8 coverage report
+```
 
-If you are adding tests as a contribution: `vitest` is the chosen runner. Mirror the source layout. Tests live at `tests/<area>.test.ts`. Mocks for outbound HTTP use the in-process `Hono` app pattern rather than `msw` or `nock`.
+The suite lives under `tests/` and uses `vitest`. New tests mirror the source layout: `tests/<area>.test.ts`. Mocks for outbound HTTP use Hono's in-process `app.request()` pattern; no `msw` or `nock` setup is needed.
+
+For new behavior: add a test. For bug fixes: add a regression test. Tests run on every PR via `.github/workflows/ci.yml` (Node 20 and 22 matrix).
 
 ## Linting and formatting
 
-No lint config yet. Phase 3 adds `eslint` (flat config, typescript-eslint recommended-type-checked) and `prettier`. Until then:
+```bash
+npm run lint          # eslint flat config + typescript-eslint
+npm run lint:fix      # autofix what can be autofixed
+npm run format        # prettier --write across the tree
+npm run format:check  # prettier --check (what CI runs)
+npm run typecheck     # tsc --noEmit
+```
 
-- Match the existing code style by eyeballing nearby files.
-- Two-space indent, single quotes, semicolons, trailing commas where syntactically legal.
-- TypeScript strict mode is on (`tsconfig.json`); the compiler is your lint until eslint lands.
+ESLint uses the flat config at `eslint.config.js` with `typescript-eslint`'s recommended set. Prettier config is `.prettierrc`. Both run on every PR.
 
-`npm run build` is the closest thing to a CI check right now. It must pass before opening a PR.
+If you are adding a new global (browser API used inside `page.evaluate()`, Node 20+ API, etc.), add it to the `globals` list in `eslint.config.js`.
 
 ## Branching, commits, PRs
 
-- **Base branch**: `master`. Branch off `master`, target `master`.
+- **Base branch**: `master`. Branch off `master`, target `master`. (Will move to `main` in a future phase.)
 - **Branch names**: kebab-case with a Conventional Commits prefix (`feat/profile-import`, `fix/cdp-proxy-close-race`).
-- **Commits**: Conventional Commits. The PR title is what becomes the squashed commit message; write it carefully.
+- **Commits**: Conventional Commits, enforced by `.github/workflows/pr-title.yml` against the PR title. The PR title becomes the squashed commit message.
 - **PRs**: squash-merged. Open against `master`. One logical change per PR.
-- **CI**: not in place yet (Phase 3). Until then, the maintainer manually runs `npm run build` and the smoke test against your branch.
-- **Review gate**: a clean human review from the maintainer is the merge gate. Senior-dev (or equivalent) review is encouraged for non-trivial PRs.
+- **CI**: `.github/workflows/ci.yml` runs lint + typecheck + tests + build on Node 20 and 22. `.github/workflows/docker.yml` builds a multi-arch image. `.github/workflows/skill-smoke.yml` re-runs this file's TL;DR block; if it fails, this file has drifted.
+- **Releases**: handled by `release-please` (`.github/workflows/release.yml`). The bot opens a release PR; merging it cuts a tag and triggers the GHCR publish.
+- **Review gate**: clean CI + a maintainer review. Senior-dev (or equivalent) review is encouraged for non-trivial PRs.
 
 ## Known failure modes
 

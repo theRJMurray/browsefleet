@@ -4,19 +4,19 @@ How BrowseFleet compares to the other ways to run a cloud browser API. This is t
 
 ## TL;DR
 
-| | BrowseFleet | Steel.dev | Browserbase | Raw Playwright/Puppeteer |
-|---|---|---|---|---|
-| License | MIT | Apache 2.0 | proprietary | (the lib is OSS) |
-| Self-host | yes (the default) | yes (open core) | no | yes (you build it) |
-| Hosted SaaS | no | yes | yes | no |
-| Stealth | yes (puppeteer-extra-plugin-stealth) | yes | yes | bring your own |
-| Profile persistence | yes | yes | yes | bring your own |
-| Human-in-the-loop control | yes (operator mode) | partial | no | bring your own |
-| AI agent layer | yes (vision-based, pluggable model) | yes (separate product) | yes (Stagehand SDK) | bring your own |
-| Official SDKs | Node, Python | Node, Python | Node, Python | Node, Python natively |
-| CDP proxy passthrough | yes | yes | yes | direct |
-| Price (hosted) | n/a (no hosted offering) | starts ~$99/mo, scales by browser-hours | starts ~$99/mo, scales by browser-hours | infrastructure cost only |
-| Price (self-hosted) | infrastructure only | infrastructure only | n/a | infrastructure only |
+|                           | BrowseFleet                          | Steel.dev                               | Browserbase                             | Raw Playwright/Puppeteer |
+| ------------------------- | ------------------------------------ | --------------------------------------- | --------------------------------------- | ------------------------ |
+| License                   | MIT                                  | Apache 2.0                              | proprietary                             | (the lib is OSS)         |
+| Self-host                 | yes (the default)                    | yes (open core)                         | no                                      | yes (you build it)       |
+| Hosted SaaS               | no                                   | yes                                     | yes                                     | no                       |
+| Stealth                   | yes (puppeteer-extra-plugin-stealth) | yes                                     | yes                                     | bring your own           |
+| Profile persistence       | yes                                  | yes                                     | yes                                     | bring your own           |
+| Human-in-the-loop control | yes (operator mode)                  | partial                                 | no                                      | bring your own           |
+| AI agent layer            | yes (vision-based, pluggable model)  | yes (separate product)                  | yes (Stagehand SDK)                     | bring your own           |
+| Official SDKs             | Node, Python                         | Node, Python                            | Node, Python                            | Node, Python natively    |
+| CDP proxy passthrough     | yes                                  | yes                                     | yes                                     | direct                   |
+| Price (hosted)            | n/a (no hosted offering)             | starts ~$99/mo, scales by browser-hours | starts ~$99/mo, scales by browser-hours | infrastructure cost only |
+| Price (self-hosted)       | infrastructure only                  | infrastructure only                     | n/a                                     | infrastructure only      |
 
 ## vs Steel.dev
 

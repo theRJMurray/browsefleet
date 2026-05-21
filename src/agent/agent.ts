@@ -1,7 +1,7 @@
 import type { Page } from 'puppeteer-core';
 import { SYSTEM_PROMPT, buildUserMessage } from './prompt.js';
 import { config } from '../config.js';
-import { logger } from '../server.js';
+import { logger } from '../logger.js';
 import { validateUrl } from '../utils/url-validator.js';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -60,16 +60,18 @@ async function callAnthropic(
       model,
       max_tokens: 1024,
       system: systemPrompt,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: 'image/png', data: screenshotBase64 },
-          },
-          { type: 'text', text: userMessage },
-        ],
-      }],
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: 'image/png', data: screenshotBase64 },
+            },
+            { type: 'text', text: userMessage },
+          ],
+        },
+      ],
     }),
   });
 
@@ -78,7 +80,7 @@ async function callAnthropic(
     throw new Error(`Anthropic API error ${res.status}: ${err}`);
   }
 
-  const data = await res.json() as any;
+  const data = (await res.json()) as any;
   const text = data.content?.[0]?.text ?? '';
   return parseAgentResponse(text);
 }
@@ -94,7 +96,7 @@ async function callOpenAI(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
       model,
@@ -120,7 +122,7 @@ async function callOpenAI(
     throw new Error(`OpenAI API error ${res.status}: ${err}`);
   }
 
-  const data = await res.json() as any;
+  const data = (await res.json()) as any;
   const text = data.choices?.[0]?.message?.content ?? '';
   return parseAgentResponse(text);
 }
@@ -136,7 +138,10 @@ function parseAgentResponse(text: string): { actions: AgentAction[]; reasoning: 
   // Try to find JSON object in the text
   const jsonMatch = json.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    return { actions: [{ type: 'fail', reason: 'Could not parse LLM response as JSON' }], reasoning: text };
+    return {
+      actions: [{ type: 'fail', reason: 'Could not parse LLM response as JSON' }],
+      reasoning: text,
+    };
   }
 
   try {
@@ -160,21 +165,21 @@ async function executeAction(page: Page, action: AgentAction): Promise<void> {
       break;
     case 'click':
       await page.mouse.click(action.x, action.y);
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise((r) => setTimeout(r, 300));
       break;
     case 'type':
       await page.keyboard.type(action.text, { delay: 30 + Math.random() * 40 });
       break;
     case 'press_key':
       await page.keyboard.press(action.key as any);
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise((r) => setTimeout(r, 200));
       break;
     case 'scroll':
       await page.mouse.wheel({ deltaX: action.deltaX ?? 0, deltaY: action.deltaY ?? 0 });
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 500));
       break;
     case 'wait':
-      await new Promise(r => setTimeout(r, Math.min(action.duration, 10_000)));
+      await new Promise((r) => setTimeout(r, Math.min(action.duration, 10_000)));
       break;
     case 'done':
     case 'fail':
@@ -188,8 +193,8 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
   const provider = request.provider ?? 'anthropic';
   const model = request.model ?? (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4o');
   const maxIterations = Math.min(request.maxIterations ?? 15, 30);
-  const llmApiKey = request.apiKey
-    ?? (provider === 'anthropic' ? config.ANTHROPIC_API_KEY : config.OPENAI_API_KEY);
+  const llmApiKey =
+    request.apiKey ?? (provider === 'anthropic' ? config.ANTHROPIC_API_KEY : config.OPENAI_API_KEY);
 
   if (!llmApiKey) {
     return {
@@ -204,7 +209,7 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
   if (request.url) {
     await validateUrl(request.url);
     await page.goto(request.url, { waitUntil: 'networkidle2', timeout: 30_000 });
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
   }
 
   const steps: AgentStep[] = [];
@@ -212,7 +217,7 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
 
   for (let i = 0; i < maxIterations; i++) {
     // Take screenshot
-    const screenshotBuffer = await page.screenshot({ encoding: 'base64', type: 'png' }) as string;
+    const screenshotBuffer = (await page.screenshot({ encoding: 'base64', type: 'png' })) as string;
 
     // Build message
     const userMessage = buildUserMessage(request.task, i, maxIterations);
@@ -225,7 +230,12 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
       response = await callLLM(llmApiKey, model, SYSTEM_PROMPT, userMessage, screenshotBuffer);
     } catch (err: any) {
       logger.error({ error: err.message, iteration: i }, 'Agent LLM call failed');
-      steps.push({ iteration: i, reasoning: `LLM error: ${err.message}`, actions: [], screenshot: screenshotBuffer });
+      steps.push({
+        iteration: i,
+        reasoning: `LLM error: ${err.message}`,
+        actions: [],
+        screenshot: screenshotBuffer,
+      });
       return { success: false, error: err.message, steps, totalIterations: i + 1 };
     }
 
@@ -237,7 +247,10 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
     };
     steps.push(step);
 
-    logger.info({ iteration: i, reasoning: response.reasoning, actionCount: response.actions.length }, 'Agent step');
+    logger.info(
+      { iteration: i, reasoning: response.reasoning, actionCount: response.actions.length },
+      'Agent step',
+    );
 
     // Check for terminal actions
     for (const action of response.actions) {
@@ -259,7 +272,7 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
     }
 
     // Small delay between iterations
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 500));
   }
 
   return {

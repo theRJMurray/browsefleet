@@ -34,7 +34,11 @@ const schema = z.object({
 
 const parsed = schema.parse(process.env);
 
-const apiKeys = parsed.API_KEYS ? parsed.API_KEYS.split(',').map(k => k.trim()).filter(Boolean) : [];
+const apiKeys = parsed.API_KEYS
+  ? parsed.API_KEYS.split(',')
+      .map((k) => k.trim())
+      .filter(Boolean)
+  : [];
 
 export const config = {
   ...parsed,

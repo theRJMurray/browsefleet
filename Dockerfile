@@ -4,11 +4,12 @@ COPY package*.json ./
 RUN npm ci
 COPY tsconfig.json ./
 COPY src/ src/
-RUN npx tsc
+RUN npx tsc && npm prune --omit=dev
 
 FROM node:22-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
+    dumb-init \
     fonts-liberation \
     fonts-noto-color-emoji \
     fonts-noto-cjk \
@@ -50,4 +51,13 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
 
+LABEL org.opencontainers.image.title="BrowseFleet" \
+      org.opencontainers.image.description="Self-hosted cloud browser API for AI agents." \
+      org.opencontainers.image.url="https://browsefleet.com" \
+      org.opencontainers.image.source="https://github.com/theRJMurray/browsefleet" \
+      org.opencontainers.image.documentation="https://github.com/theRJMurray/browsefleet/blob/master/README.md" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.vendor="RJ Murray and contributors"
+
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/server.js"]

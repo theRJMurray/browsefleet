@@ -1,7 +1,7 @@
 name: Feature request
 description: Propose a new feature or behavior change.
-title: "feat: "
-labels: ["enhancement", "triage"]
+title: 'feat: '
+labels: ['enhancement', 'triage']
 body:
   - type: markdown
     attributes:
@@ -13,7 +13,7 @@ body:
     attributes:
       label: What problem does this solve?
       description: Describe the use case or the pain. Not the solution yet.
-      placeholder: "When I run BrowseFleet behind a corporate proxy, I need X. Today I work around it by Y, which is brittle because Z."
+      placeholder: 'When I run BrowseFleet behind a corporate proxy, I need X. Today I work around it by Y, which is brittle because Z.'
     validations:
       required: true
 

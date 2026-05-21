@@ -11,8 +11,11 @@ export function filesRoutes(pool: BrowserPool): Hono {
   app.post('/:id/files', async (c) => {
     const apiKey = c.req.header('x-api-key');
     let session;
-    try { session = getOwnedSession(pool, c.req.param('id'), apiKey); }
-    catch (e: any) { return c.json({ error: e.message }, e.status ?? 404); }
+    try {
+      session = getOwnedSession(pool, c.req.param('id'), apiKey);
+    } catch (e: any) {
+      return c.json({ error: e.message }, e.status ?? 404);
+    }
 
     const body = await c.req.parseBody();
     const file = body['file'];
@@ -35,15 +38,19 @@ export function filesRoutes(pool: BrowserPool): Hono {
   app.get('/:id/files', (c) => {
     const apiKey = c.req.header('x-api-key');
     let session;
-    try { session = getOwnedSession(pool, c.req.param('id'), apiKey); }
-    catch (e: any) { return c.json({ error: e.message }, e.status ?? 404); }
+    try {
+      session = getOwnedSession(pool, c.req.param('id'), apiKey);
+    } catch (e: any) {
+      return c.json({ error: e.message }, e.status ?? 404);
+    }
 
     const uploadDir = `/tmp/bf-uploads-${session.id}`;
     const downloadDir = `/tmp/bf-downloads-${session.id}`;
 
     const files: string[] = [];
-    if (existsSync(uploadDir)) files.push(...readdirSync(uploadDir).map(f => `uploads/${f}`));
-    if (existsSync(downloadDir)) files.push(...readdirSync(downloadDir).map(f => `downloads/${f}`));
+    if (existsSync(uploadDir)) files.push(...readdirSync(uploadDir).map((f) => `uploads/${f}`));
+    if (existsSync(downloadDir))
+      files.push(...readdirSync(downloadDir).map((f) => `downloads/${f}`));
 
     return c.json({ files });
   });
@@ -52,8 +59,11 @@ export function filesRoutes(pool: BrowserPool): Hono {
   app.get('/:id/files/:name', (c) => {
     const apiKey = c.req.header('x-api-key');
     let session;
-    try { session = getOwnedSession(pool, c.req.param('id'), apiKey); }
-    catch (e: any) { return c.json({ error: e.message }, e.status ?? 404); }
+    try {
+      session = getOwnedSession(pool, c.req.param('id'), apiKey);
+    } catch (e: any) {
+      return c.json({ error: e.message }, e.status ?? 404);
+    }
 
     const name = path.basename(c.req.param('name'));
 

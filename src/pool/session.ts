@@ -49,9 +49,15 @@ export class BrowserSession {
     }, this.timeout);
   }
 
-  get status() { return this._status; }
-  get controlMode() { return this._controlMode; }
-  get sensitiveMode() { return this._sensitiveMode; }
+  get status() {
+    return this._status;
+  }
+  get controlMode() {
+    return this._controlMode;
+  }
+  get sensitiveMode() {
+    return this._sensitiveMode;
+  }
 
   setControl(controlMode: SessionControlMode, reason?: string): void {
     this._controlMode = controlMode;
@@ -67,16 +73,24 @@ export class BrowserSession {
       throw Object.assign(new Error(`Session is ${this._status}`), { status: 409 });
     }
     if (this._controlMode === 'human') {
-      throw Object.assign(new Error('Session is in human-control mode. Resume agent control before sending automation actions.'), { status: 423 });
+      throw Object.assign(
+        new Error(
+          'Session is in human-control mode. Resume agent control before sending automation actions.',
+        ),
+        { status: 423 },
+      );
     }
     if (this._controlMode === 'paused') {
-      throw Object.assign(new Error('Session is paused. Resume agent control before sending automation actions.'), { status: 423 });
+      throw Object.assign(
+        new Error('Session is paused. Resume agent control before sending automation actions.'),
+        { status: 423 },
+      );
     }
   }
 
   async getPage(): Promise<Page> {
     const pages = await this.browser.pages();
-    return pages[0] ?? await this.browser.newPage();
+    return pages[0] ?? (await this.browser.newPage());
   }
 
   async getSnapshot(opts: { includeScreenshot?: boolean; quality?: number } = {}) {
@@ -109,11 +123,11 @@ export class BrowserSession {
       if (this._sensitiveMode) {
         snapshot.screenshotSuppressed = true;
       } else {
-        snapshot.screenshot = await page.screenshot({
+        snapshot.screenshot = (await page.screenshot({
           encoding: 'base64',
           type: 'jpeg',
           quality: opts.quality ?? 60,
-        }) as string;
+        })) as string;
       }
     }
 

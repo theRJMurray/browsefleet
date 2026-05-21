@@ -67,18 +67,18 @@ This is the escape hatch. Anything the high-level endpoints do not cover, the ca
 
 ## State, where it lives, and lifetime
 
-| What | Where | Lifetime |
-|------|-------|----------|
-| API keys | `api_keys` table | persists |
-| Session metadata while running | `BrowserSession` in memory | until release or process exit |
-| Session audit log after release | `sessions` table | persists |
-| Per-request audit | `api_calls` table | persists |
-| Daily roll-ups | `daily_usage` table | persists |
-| Profile metadata | `data/profiles/<id>/meta.json` on disk | persists |
-| Profile Chrome user data | `data/profiles/<id>/chrome/` filesystem | persists |
-| Rate-limit counters | in-process memory | resets every 1 s; lost on restart |
-| Temp uploads | `/tmp/bf-uploads-<sessionId>/` | until session release |
-| Temp downloads | `/tmp/bf-downloads-<sessionId>/` | until session release |
+| What                            | Where                                   | Lifetime                          |
+| ------------------------------- | --------------------------------------- | --------------------------------- |
+| API keys                        | `api_keys` table                        | persists                          |
+| Session metadata while running  | `BrowserSession` in memory              | until release or process exit     |
+| Session audit log after release | `sessions` table                        | persists                          |
+| Per-request audit               | `api_calls` table                       | persists                          |
+| Daily roll-ups                  | `daily_usage` table                     | persists                          |
+| Profile metadata                | `data/profiles/<id>/meta.json` on disk  | persists                          |
+| Profile Chrome user data        | `data/profiles/<id>/chrome/` filesystem | persists                          |
+| Rate-limit counters             | in-process memory                       | resets every 1 s; lost on restart |
+| Temp uploads                    | `/tmp/bf-uploads-<sessionId>/`          | until session release             |
+| Temp downloads                  | `/tmp/bf-downloads-<sessionId>/`        | until session release             |
 
 The schema includes a `profiles` SQLite table that is currently unused; profile metadata is read from and written to the per-profile `meta.json` file instead. The table is reserved for a future migration.
 

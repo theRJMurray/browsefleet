@@ -16,11 +16,11 @@ The intent is to make a BrowseFleet session look indistinguishable from a real h
 
 `STEALTH_DEFAULT` accepts three values. Each can be overridden per-session via the `stealth` field on `POST /v1/sessions` or on any one-shot endpoint.
 
-| Setting | Plugin | Per-session randomization | CPU overhead |
-|---------|--------|---------------------------|--------------|
-| `full` (default) | on | on | highest |
-| `basic` | on | off | medium |
-| `none` | off | off | lowest |
+| Setting          | Plugin | Per-session randomization | CPU overhead |
+| ---------------- | ------ | ------------------------- | ------------ |
+| `full` (default) | on     | on                        | highest      |
+| `basic`          | on     | off                       | medium       |
+| `none`           | off    | off                       | lowest       |
 
 Use `none` when:
 

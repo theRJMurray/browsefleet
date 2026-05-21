@@ -23,9 +23,10 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
   // List sessions (filtered by requesting API key)
   app.get('/', (c) => {
     const apiKey = c.req.header('x-api-key');
-    const sessions = pool.listSessions()
-      .filter(s => !s.apiKey || !apiKey || s.apiKey === apiKey)
-      .map(s => s.toApiObject());
+    const sessions = pool
+      .listSessions()
+      .filter((s) => !s.apiKey || !apiKey || s.apiKey === apiKey)
+      .map((s) => s.toApiObject());
     return c.json({ sessions, count: sessions.length });
   });
 
@@ -33,16 +34,22 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
   app.get('/:id', (c) => {
     const apiKey = c.req.header('x-api-key');
     let session;
-    try { session = getOwnedSession(pool, c.req.param('id'), apiKey); }
-    catch (e: any) { return c.json({ error: e.message }, e.status ?? 404); }
+    try {
+      session = getOwnedSession(pool, c.req.param('id'), apiKey);
+    } catch (e: any) {
+      return c.json({ error: e.message }, e.status ?? 404);
+    }
     return c.json(session.toApiObject());
   });
 
   // Release session
   app.post('/:id/release', async (c) => {
     const apiKey = c.req.header('x-api-key');
-    try { getOwnedSession(pool, c.req.param('id'), apiKey); }
-    catch (e: any) { return c.json({ error: e.message }, e.status ?? 404); }
+    try {
+      getOwnedSession(pool, c.req.param('id'), apiKey);
+    } catch (e: any) {
+      return c.json({ error: e.message }, e.status ?? 404);
+    }
     const released = await pool.releaseSession(c.req.param('id'));
     if (!released) return c.json({ error: 'Session not found' }, 404);
     return c.json({ released: true });
@@ -52,10 +59,15 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
   app.post('/:id/control', async (c) => {
     const apiKey = c.req.header('x-api-key');
     let session;
-    try { session = getOwnedSession(pool, c.req.param('id'), apiKey); }
-    catch (e: any) { return c.json({ error: e.message }, e.status ?? 404); }
+    try {
+      session = getOwnedSession(pool, c.req.param('id'), apiKey);
+    } catch (e: any) {
+      return c.json({ error: e.message }, e.status ?? 404);
+    }
 
-    const body = await c.req.json<ControlSessionRequest>().catch(() => ({} as ControlSessionRequest));
+    const body = await c.req
+      .json<ControlSessionRequest>()
+      .catch(() => ({}) as ControlSessionRequest);
     if (body.controlMode && !['agent', 'human', 'paused'].includes(body.controlMode)) {
       return c.json({ error: 'controlMode must be agent, human, or paused' }, 400);
     }
@@ -69,13 +81,16 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
   // Release all or batch (only caller's sessions)
   app.post('/release', async (c) => {
     const apiKey = c.req.header('x-api-key');
-    const body = await c.req.json<ReleaseRequest>().catch(() => ({} as ReleaseRequest));
+    const body = await c.req.json<ReleaseRequest>().catch(() => ({}) as ReleaseRequest);
 
     if (body.ids && body.ids.length > 0) {
       let count = 0;
       for (const id of body.ids) {
-        try { getOwnedSession(pool, id, apiKey); }
-        catch { continue; }
+        try {
+          getOwnedSession(pool, id, apiKey);
+        } catch {
+          continue;
+        }
         if (await pool.releaseSession(id)) count++;
       }
       return c.json({ released: count });
@@ -95,8 +110,11 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
   app.get('/:id/live', async (c) => {
     const apiKey = c.req.header('x-api-key');
     let session;
-    try { session = getOwnedSession(pool, c.req.param('id'), apiKey); }
-    catch (e: any) { return c.json({ error: e.message }, e.status ?? 404); }
+    try {
+      session = getOwnedSession(pool, c.req.param('id'), apiKey);
+    } catch (e: any) {
+      return c.json({ error: e.message }, e.status ?? 404);
+    }
 
     c.header('Content-Type', 'text/event-stream');
     c.header('Cache-Control', 'no-cache');
@@ -149,7 +167,7 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
       },
     });
   });
@@ -158,8 +176,11 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
   app.get('/:id/events', async (c) => {
     const apiKey = c.req.header('x-api-key');
     let session;
-    try { session = getOwnedSession(pool, c.req.param('id'), apiKey); }
-    catch (e: any) { return c.json({ error: e.message }, e.status ?? 404); }
+    try {
+      session = getOwnedSession(pool, c.req.param('id'), apiKey);
+    } catch (e: any) {
+      return c.json({ error: e.message }, e.status ?? 404);
+    }
 
     let interval: ReturnType<typeof setInterval> | undefined;
     let closed = false;
@@ -177,7 +198,9 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
         interval = setInterval(async () => {
           try {
             const snapshot = await session.getSnapshot({ includeScreenshot: true, quality: 45 });
-            controller.enqueue(encoder.encode(`event: snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`));
+            controller.enqueue(
+              encoder.encode(`event: snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`),
+            );
           } catch {
             if (interval) clearInterval(interval);
             close();
@@ -193,7 +216,7 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
       },
     });
   });

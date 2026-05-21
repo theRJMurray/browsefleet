@@ -106,7 +106,13 @@ export interface PdfRequest {
 
 export type BrowserAction =
   | { type: 'screenshot' }
-  | { type: 'click'; x: number; y: number; button?: 'left' | 'right' | 'middle'; clickCount?: number }
+  | {
+      type: 'click';
+      x: number;
+      y: number;
+      button?: 'left' | 'right' | 'middle';
+      clickCount?: number;
+    }
   | { type: 'type'; text: string }
   | { type: 'press_key'; key: string }
   | { type: 'scroll'; x?: number; y?: number; deltaX?: number; deltaY?: number }

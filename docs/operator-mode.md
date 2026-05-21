@@ -6,11 +6,11 @@ Operator mode lets a session start in `human` control so a real person can log i
 
 Every session has a `controlMode` field with three values:
 
-| Mode | Input actions allowed (`/v1/sessions/:id/actions`) | Use when |
-|------|----------------------------------------------------|----------|
-| `agent` | yes | normal automation; the default for non-operator sessions |
-| `human` | no (whole batch returns `423 Locked` if it includes anything other than `screenshot` or `wait`) | a real person is driving via the live viewer |
-| `paused` | no (same gating as `human`) | approvals, investigation, anything that should freeze the session |
+| Mode     | Input actions allowed (`/v1/sessions/:id/actions`)                                              | Use when                                                          |
+| -------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `agent`  | yes                                                                                             | normal automation; the default for non-operator sessions          |
+| `human`  | no (whole batch returns `423 Locked` if it includes anything other than `screenshot` or `wait`) | a real person is driving via the live viewer                      |
+| `paused` | no (same gating as `human`)                                                                     | approvals, investigation, anything that should freeze the session |
 
 Only `screenshot` and `wait` actions are allowed under `human` or `paused`. Everything else (including `move_mouse`) is treated as input and locks the batch. The `screenshot` action additionally returns `success: false` per-result when `sensitiveMode` is on.
 

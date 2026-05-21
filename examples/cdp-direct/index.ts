@@ -18,7 +18,7 @@ async function main() {
     body: JSON.stringify({ stealth: 'full' }),
   });
   if (!sessionRes.ok) throw new Error(`Session create failed: ${sessionRes.status}`);
-  const session = await sessionRes.json() as { id: string; websocketUrl: string };
+  const session = (await sessionRes.json()) as { id: string; websocketUrl: string };
   console.log('  Session id:', session.id);
   console.log('  CDP URL:', session.websocketUrl);
 

@@ -20,16 +20,16 @@ Thanks for taking the time. BrowseFleet is a small, fast-moving project and good
 
 We follow Conventional Commits. The PR title is what lands in the squashed commit, so write it as a conventional commit:
 
-| Prefix | Use for |
-|--------|---------|
-| `feat:` | new user-visible feature |
-| `fix:` | bug fix |
-| `perf:` | performance improvement, no behavior change |
+| Prefix      | Use for                                                 |
+| ----------- | ------------------------------------------------------- |
+| `feat:`     | new user-visible feature                                |
+| `fix:`      | bug fix                                                 |
+| `perf:`     | performance improvement, no behavior change             |
 | `refactor:` | code change that neither fixes a bug nor adds a feature |
-| `docs:` | documentation only |
-| `test:` | test only |
-| `chore:` | tooling, build, CI, dependencies |
-| `ci:` | CI configuration only |
+| `docs:`     | documentation only                                      |
+| `test:`     | test only                                               |
+| `chore:`    | tooling, build, CI, dependencies                        |
+| `ci:`       | CI configuration only                                   |
 
 A `BREAKING CHANGE:` footer or a `!` in the subject (e.g. `feat!: ...`) triggers a major version bump on the next release.
 

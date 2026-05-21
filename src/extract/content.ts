@@ -14,8 +14,10 @@ export function extractContent(html: string, url: string) {
 
   // Extract metadata
   const title = doc.querySelector('title')?.textContent?.trim() ?? '';
-  const description = doc.querySelector('meta[name="description"]')?.getAttribute('content') ?? undefined;
-  const ogImage = doc.querySelector('meta[property="og:image"]')?.getAttribute('content') ?? undefined;
+  const description =
+    doc.querySelector('meta[name="description"]')?.getAttribute('content') ?? undefined;
+  const ogImage =
+    doc.querySelector('meta[property="og:image"]')?.getAttribute('content') ?? undefined;
   const canonical = doc.querySelector('link[rel="canonical"]')?.getAttribute('href') ?? undefined;
 
   // Extract links
@@ -30,8 +32,14 @@ export function extractContent(html: string, url: string) {
 
   // Cleaned HTML — remove scripts, styles, hidden elements
   const cleanDoc = new JSDOM(html, { url }).window.document;
-  cleanDoc.querySelectorAll('script, style, noscript, iframe, svg, link[rel="stylesheet"]').forEach((el: Element) => el.remove());
-  cleanDoc.querySelectorAll('[style*="display:none"], [style*="display: none"], [hidden], [aria-hidden="true"]').forEach((el: Element) => el.remove());
+  cleanDoc
+    .querySelectorAll('script, style, noscript, iframe, svg, link[rel="stylesheet"]')
+    .forEach((el: Element) => el.remove());
+  cleanDoc
+    .querySelectorAll(
+      '[style*="display:none"], [style*="display: none"], [hidden], [aria-hidden="true"]',
+    )
+    .forEach((el: Element) => el.remove());
   cleanDoc.querySelectorAll('nav, header, footer').forEach((el: Element) => el.remove());
   const cleanedHtml = cleanDoc.body?.innerHTML?.trim() ?? '';
 
