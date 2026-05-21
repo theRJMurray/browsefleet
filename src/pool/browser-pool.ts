@@ -11,7 +11,6 @@ import type { Browser } from 'puppeteer-core';
 puppeteer.use(StealthPlugin());
 
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
-import { reportUsage } from '../billing/stripe.js';
 import { getStealthArgs, randomViewport, randomUserAgent } from '../stealth/stealth.js';
 import { profileExists, profileUserDataDir, touchProfile } from '../routes/profiles.js';
 
@@ -188,11 +187,6 @@ export class BrowserPool {
     try { rmSync(`/tmp/bf-downloads-${id}`, { recursive: true, force: true }); } catch {}
 
     logger.info({ sessionId: id, browserHours: browserHours.toFixed(4) }, 'Session released');
-
-    // Report metered usage to Stripe (non-blocking)
-    if (session.apiKey) {
-      reportUsage(session.apiKey, browserHours).catch(() => {});
-    }
 
     return true;
   }

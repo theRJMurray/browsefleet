@@ -25,11 +25,6 @@ const schema = z.object({
   CDP_EXTERNAL_PORT: z.coerce.number().default(3000),
   CDP_EXTERNAL_SCHEME: z.enum(['ws', 'wss']).default('ws'),
 
-  STRIPE_SECRET_KEY: z.string().default(''),
-  STRIPE_WEBHOOK_SECRET: z.string().default(''),
-  STRIPE_PRICE_ID: z.string().default(''),
-  STRIPE_METER_EVENT_NAME: z.string().default('browser_hours'),
-
   ANTHROPIC_API_KEY: z.string().default(''),
   OPENAI_API_KEY: z.string().default(''),
 
@@ -45,7 +40,6 @@ export const config = {
   ...parsed,
   apiKeys,
   authEnabled: apiKeys.length > 0,
-  stripeEnabled: parsed.STRIPE_SECRET_KEY.length > 0,
   dataDir: path.resolve(parsed.DATA_DIR),
   chromePath: parsed.CHROME_PATH || undefined,
 };

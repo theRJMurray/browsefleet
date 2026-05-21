@@ -1,0 +1,97 @@
+name: Bug report
+description: Something is not working as documented.
+title: "bug: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Before you file, please:
+
+        1. Confirm this is reproducible on the latest `master` (or the latest released tag).
+        2. Check existing issues to avoid duplicates.
+        3. If this is a security issue, do **not** file here. See [SECURITY.md](https://github.com/theRJMurray/browsefleet/blob/master/SECURITY.md).
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the actual behavior.
+      placeholder: "I called POST /v1/sessions with operatorMode:true and the server returned 500."
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-expected
+    attributes:
+      label: What did you expect to happen?
+      placeholder: "A 201 with a session id and a CDP URL."
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: The smallest sequence of commands or API calls that reproduces the bug. Curl examples preferred.
+      placeholder: |
+        1. `docker run -p 3000:3000 --shm-size=2g ghcr.io/therjmurray/browsefleet:latest`
+        2. `curl -X POST localhost:3000/v1/sessions -H 'Content-Type: application/json' -d '{"operatorMode":true}'`
+        3. Response: 500 Internal Server Error with body `{"error":"..."}`.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: BrowseFleet version
+      description: Output of `curl localhost:3000/health` (look for the `version` field), or the Docker image tag, or the commit SHA.
+      placeholder: "0.2.0 / ghcr.io/therjmurray/browsefleet:0.2.0 / commit b5ad56e"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: How are you running BrowseFleet?
+      options:
+        - Local dev (npm run dev)
+        - Docker image from GHCR
+        - Self-built Docker image
+        - Fly.io
+        - Hetzner / VPS with docker-compose
+        - AWS / GCP / Azure
+        - Other (please describe in "What happened?")
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node version
+      description: Only if running outside Docker. `node --version`.
+      placeholder: "v22.11.0"
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "Ubuntu 24.04 / macOS 15.1 / Windows 11"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Server logs around the failure. Use a fenced code block.
+      render: shell
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/theRJMurray/browsefleet/blob/master/CODE_OF_CONDUCT.md).
+          required: true

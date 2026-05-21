@@ -1,0 +1,7 @@
+# BrowseFleet code owners.
+# Every file is owned by the BDFL by default. Add more owners as the maintainer
+# team grows. Patterns are evaluated top to bottom; the last match wins.
+#
+# Format: <path pattern> <owner1> <owner2> ...
+
+* @theRJMurray

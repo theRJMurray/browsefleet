@@ -17,7 +17,6 @@ import { actionsRoutes } from './routes/actions.js';
 import { captchaRoutes } from './routes/captcha.js';
 import { profilesRoutes } from './routes/profiles.js';
 import { filesRoutes } from './routes/files.js';
-import { billingRoutes, billingWebhookRoute } from './routes/billing.js';
 import { agentRoutes } from './routes/agent.js';
 import { closeDb } from './db/schema.js';
 import { mkdirSync } from 'node:fs';
@@ -69,9 +68,6 @@ app.get('/health', (c) => {
   });
 });
 
-// Stripe webhook — must be registered BEFORE auth middleware (Stripe signs the request itself)
-app.route('/v1/billing', billingWebhookRoute());
-
 // Auth middleware for all /v1 routes
 app.use('/v1/*', authMiddleware);
 
@@ -87,7 +83,6 @@ app.route('/v1/sessions', actionsRoutes(pool));
 app.route('/v1/sessions', captchaRoutes(pool));
 app.route('/v1/profiles', profilesRoutes());
 app.route('/v1/sessions', filesRoutes(pool));
-app.route('/v1/billing', billingRoutes());
 app.route('/v1/agent', agentRoutes(pool));
 app.route('/v1/sessions', agentRoutes(pool));
 

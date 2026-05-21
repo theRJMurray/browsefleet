@@ -1,8 +1,38 @@
 {
   "name": "browsefleet",
   "version": "0.1.0",
-  "private": true,
+  "description": "Self-hosted cloud browser API for AI agents. Sessions, scraping, screenshots, PDF, stealth, profile persistence, and human-in-the-loop control behind one REST endpoint.",
+  "license": "MIT",
+  "author": "RJ Murray and contributors",
+  "homepage": "https://browsefleet.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/theRJMurray/browsefleet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/theRJMurray/browsefleet/issues"
+  },
+  "keywords": [
+    "browser",
+    "puppeteer",
+    "playwright",
+    "headless-chrome",
+    "scraping",
+    "screenshot",
+    "browser-automation",
+    "ai-agent",
+    "stealth",
+    "captcha",
+    "browser-api",
+    "self-hosted",
+    "open-source",
+    "cdp",
+    "browsefleet"
+  ],
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
@@ -22,7 +52,6 @@
     "puppeteer-core": "^24.0.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
-    "stripe": "^22.0.0",
     "turndown": "^7.2.0",
     "uuid": "^11.1.0",
     "ws": "^8.18.0",

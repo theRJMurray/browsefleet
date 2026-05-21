@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or general discussion
+    url: https://github.com/theRJMurray/browsefleet/discussions
+    about: Please use Discussions for questions, design conversations, or anything that is not a clear bug or feature request.
+  - name: Security vulnerability
+    url: https://github.com/theRJMurray/browsefleet/blob/master/SECURITY.md
+    about: Do not file security issues publicly. See SECURITY.md for the private disclosure process.

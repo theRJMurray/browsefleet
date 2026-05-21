@@ -26,9 +26,6 @@ function runMigrations(db: Database.Database) {
       max_concurrent_sessions INTEGER DEFAULT 30,
       max_session_duration INTEGER DEFAULT 1800000,
       rate_limit_per_second INTEGER DEFAULT 10,
-      stripe_customer_id TEXT,
-      stripe_subscription_id TEXT,
-      stripe_subscription_item_id TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       is_active INTEGER DEFAULT 1
     );
@@ -81,21 +78,7 @@ function runMigrations(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_sessions_created_at ON sessions(created_at);
     CREATE INDEX IF NOT EXISTS idx_api_calls_key_created ON api_calls(api_key, created_at);
     CREATE INDEX IF NOT EXISTS idx_daily_usage_date ON daily_usage(date);
-    CREATE INDEX IF NOT EXISTS idx_api_keys_stripe_customer ON api_keys(stripe_customer_id);
   `);
-
-  // Add Stripe columns to existing api_keys tables (safe to re-run)
-  const cols = db.pragma('table_info(api_keys)') as Array<{ name: string }>;
-  const colNames = new Set(cols.map(c => c.name));
-  if (!colNames.has('stripe_customer_id')) {
-    db.exec('ALTER TABLE api_keys ADD COLUMN stripe_customer_id TEXT');
-  }
-  if (!colNames.has('stripe_subscription_id')) {
-    db.exec('ALTER TABLE api_keys ADD COLUMN stripe_subscription_id TEXT');
-  }
-  if (!colNames.has('stripe_subscription_item_id')) {
-    db.exec('ALTER TABLE api_keys ADD COLUMN stripe_subscription_item_id TEXT');
-  }
 }
 
 export function closeDb() {

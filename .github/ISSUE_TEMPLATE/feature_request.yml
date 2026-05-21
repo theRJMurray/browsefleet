@@ -1,0 +1,66 @@
+name: Feature request
+description: Propose a new feature or behavior change.
+title: "feat: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the proposal. Significant changes should be discussed before implementation. Read [GOVERNANCE.md](https://github.com/theRJMurray/browsefleet/blob/master/GOVERNANCE.md) for the decision process.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the use case or the pain. Not the solution yet.
+      placeholder: "When I run BrowseFleet behind a corporate proxy, I need X. Today I work around it by Y, which is brittle because Z."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API or behavior
+      description: How would the feature work from a user's perspective? Code samples welcome.
+      placeholder: |
+        Add a `CORPORATE_PROXY_CA` env var that points at a PEM file. On boot, the server adds it to the Node trust store.
+
+        ```bash
+        CORPORATE_PROXY_CA=/etc/ssl/certs/corp.pem npm run start
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What else have you tried or considered? Why is this one better?
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      description: Rough size of the change you are proposing.
+      options:
+        - Small (one file, one PR)
+        - Medium (a few files, one PR)
+        - Large (multiple PRs or a new subsystem)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Would you like to implement this yourself?
+      options:
+        - label: Yes, I plan to send a PR once we agree on the approach.
+        - label: No, I am proposing this for someone else to pick up.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/theRJMurray/browsefleet/blob/master/CODE_OF_CONDUCT.md).
+          required: true
