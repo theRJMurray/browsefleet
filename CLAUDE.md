@@ -1,4 +1,4 @@
-# BrowseFleet — Cloud Browser API
+# BrowseFleet: Cloud Browser API
 
 Open-source headless browser API for AI agents and automation. Competing with Steel.dev.
 
@@ -22,12 +22,12 @@ Single Node.js process managing Chrome child processes via puppeteer-core/puppet
 
 ## Key Directories
 
-- `src/pool/` — BrowserPool + BrowserSession (Chrome lifecycle management)
-- `src/proxy/` — CDP WebSocket proxy (transparent, bidirectional)
-- `src/routes/` — All API endpoints
-- `src/extract/` — HTML → markdown/readability content extraction
-- `src/stealth/` — Anti-detection configuration
-- `src/db/` — SQLite schema + usage tracking
+- `src/pool/`, BrowserPool + BrowserSession (Chrome lifecycle management)
+- `src/proxy/`, CDP WebSocket proxy (transparent, bidirectional)
+- `src/routes/`, All API endpoints
+- `src/extract/`, HTML → markdown/readability content extraction
+- `src/stealth/`, Anti-detection configuration
+- `src/db/`, SQLite schema + usage tracking
 
 ## API Endpoints
 
@@ -55,14 +55,14 @@ Single Node.js process managing Chrome child processes via puppeteer-core/puppet
 
 ## Operator Mode
 
-Browser Relay uses BrowseFleet sessions as human-authenticated provider-console workspaces.
+Operator Mode lets a session start in human control, so a real person logs in, then hand off to an agent. Use it for any provider console, banking site, or workflow that fails CAPTCHA on first attempt. The session stays running on the host; the agent and the human exchange the keyboard via the `/control` endpoint.
 
 Create a persistent provider profile:
 
 ```bash
 curl -X POST localhost:3000/v1/profiles \
   -H 'Content-Type: application/json' \
-  -d '{"name":"RJ Vercel","provider":"vercel"}'
+  -d '{"name":"my-provider-profile"}'
 ```
 
 Start an operator session from that profile:
@@ -76,7 +76,7 @@ curl -X POST localhost:3000/v1/sessions \
 New session fields:
 
 - `profileId` attaches the browser to a persistent Chrome user-data directory.
-- `operatorMode:true` starts in `human` control so an agent cannot type until RJ resumes.
+- `operatorMode:true` starts in `human` control so an agent cannot type until the operator resumes.
 - `headless:false` is available for local headed Chrome; the default remains headless for cloud/runtime use.
 - `sensitiveMode:true` suppresses screenshots in `/actions`, `/live`, and `/events`.
 - `eventsUrl` streams snapshots with `url`, `title`, `controlMode`, `sensitiveMode`, and a screenshot when allowed.
@@ -86,26 +86,26 @@ Switch control:
 ```bash
 curl -X POST localhost:3000/v1/sessions/<session-id>/control \
   -H 'Content-Type: application/json' \
-  -d '{"controlMode":"agent","sensitiveMode":false,"reason":"RJ completed login"}'
+  -d '{"controlMode":"agent","sensitiveMode":false,"reason":"operator completed login"}'
 ```
 
 `controlMode` values:
 
-- `agent` — automation input is allowed.
-- `human` — click/type/navigate actions return `423` until resumed.
-- `paused` — same input lock as `human`, used for approvals or investigation.
+- `agent`, automation input is allowed.
+- `human`, click/type/navigate actions return `423` until resumed.
+- `paused`, same input lock as `human`, used for approvals or investigation.
 
-Screenshot actions and event streams stay available unless `sensitiveMode` is enabled. This lets Overlord show the live browser while preventing accidental credential capture during secret entry.
+Screenshot actions and event streams stay available unless `sensitiveMode` is enabled. This lets a consumer render the live browser to a human reviewer while preventing accidental credential capture during secret entry.
 
 ## Environment Variables
 
 See `.env.example` for all options. Key ones:
-- `API_KEYS` — comma-separated API keys (empty = no auth)
-- `MAX_CONCURRENT_SESSIONS` — default 30
-- `STEALTH_DEFAULT` — none/basic/full (default: full)
-- `CHROME_PATH` — path to Chrome/Chromium binary
-- `CAPTCHA_API_KEY` — 2captcha API key for CAPTCHA solving
-- `PROXY_URL` — global proxy URL
+- `API_KEYS`, comma-separated API keys (empty = no auth)
+- `MAX_CONCURRENT_SESSIONS`, default 30
+- `STEALTH_DEFAULT`, none/basic/full (default: full)
+- `CHROME_PATH`, path to Chrome/Chromium binary
+- `CAPTCHA_API_KEY`, 2captcha API key for CAPTCHA solving
+- `PROXY_URL`, global proxy URL
 
 ## Testing
 

@@ -1,5 +1,35 @@
+# dependencies
 node_modules/
+
+# build output
 dist/
+*.tsbuildinfo
+
+# runtime data
 data/
+
+# env
 .env
+.env.local
+.env.*.local
+
+# logs
 *.log
+npm-debug.log*
+
+# coverage
+coverage/
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# package managers
+.npm
+.yarn/
+
+# agent tooling artifacts
+.codex/
+.claude/
