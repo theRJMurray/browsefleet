@@ -4,6 +4,24 @@ All notable changes to BrowseFleet are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.0 (2026-05-22)
+
+
+### Features
+
+* add AI agent layer - vision-based browser automation with Claude/GPT ([3acc03a](https://github.com/theRJMurray/browsefleet/commit/3acc03a7dba25b8c60806a74f8486ed4dceb5bbe))
+* add operator-mode browser sessions ([#1](https://github.com/theRJMurray/browsefleet/issues/1)) ([78cf9e7](https://github.com/theRJMurray/browsefleet/commit/78cf9e77ae612a6cadb80588722aa2da76300727))
+* add Stripe metered billing integration ([cdab111](https://github.com/theRJMurray/browsefleet/commit/cdab111017e70f6925077195972d562d1942dfcf))
+* initial BrowseFleet - cloud browser API ([226635d](https://github.com/theRJMurray/browsefleet/commit/226635dbe2e0e60b6f006426e3e1a5d7d4871051))
+* oss phase 1 foundation (license, governance, security, skill.md) ([#3](https://github.com/theRJMurray/browsefleet/issues/3)) ([90e4ba7](https://github.com/theRJMurray/browsefleet/commit/90e4ba7763ee7feb60b62fd4d3c6af3ef0caf49a))
+* oss phase 2 docs and examples ([#4](https://github.com/theRJMurray/browsefleet/issues/4)) ([fcdb735](https://github.com/theRJMurray/browsefleet/commit/fcdb735703bcb2483fcefff83cf4a9021f83fe1c))
+* oss phase 3 ci, releases, docker publish ([#5](https://github.com/theRJMurray/browsefleet/issues/5)) ([30d80f7](https://github.com/theRJMurray/browsefleet/commit/30d80f723dbb173cb866e925c948ffc45fe1bc50))
+
+
+### Bug Fixes
+
+* agent session ownership, timing-safe CDP auth, rate-limit cleanup ([aeef296](https://github.com/theRJMurray/browsefleet/commit/aeef2962f0a47ccddc5d3cb90caf1989fecdac35))
+
 ## [Unreleased]
 
 ### Added

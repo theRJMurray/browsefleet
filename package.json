@@ -1,6 +1,6 @@
 {
   "name": "browsefleet",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Self-hosted cloud browser API for AI agents. Sessions, scraping, screenshots, PDF, stealth, profile persistence, and human-in-the-loop control behind one REST endpoint.",
   "license": "MIT",
   "author": "RJ Murray and contributors",
