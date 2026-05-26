@@ -6,6 +6,10 @@ on:
     tags: ['v*.*.*']
   pull_request:
     branches: [master, main]
+  # Manual trigger. Dispatch against a tag ref (e.g. v1.0.0) to (re)build the
+  # semver-tagged image when a release tag was cut by a bot token that could
+  # not trigger the tag-push event itself.
+  workflow_dispatch: {}
 
 concurrency:
   group: docker-${{ github.workflow }}-${{ github.ref }}

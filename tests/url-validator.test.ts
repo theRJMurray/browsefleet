@@ -45,6 +45,18 @@ describe('validateUrl', () => {
       await expect(validateUrl('http://[::1]/')).rejects.toThrow(/private\/reserved/);
     });
 
+    it('blocks IPv6 unspecified ::', async () => {
+      await expect(validateUrl('http://[::]/')).rejects.toThrow(/private\/reserved/);
+    });
+
+    it('blocks IPv4-mapped IPv6 loopback ::ffff:127.0.0.1', async () => {
+      await expect(validateUrl('http://[::ffff:127.0.0.1]/')).rejects.toThrow(/private\/reserved/);
+    });
+
+    it('blocks IPv4-mapped IPv6 private ::ffff:10.0.0.1', async () => {
+      await expect(validateUrl('http://[::ffff:10.0.0.1]/')).rejects.toThrow(/private\/reserved/);
+    });
+
     it('blocks 10.0.0.0/8 private range', async () => {
       await expect(validateUrl('http://10.5.5.5/')).rejects.toThrow(/private\/reserved/);
     });
