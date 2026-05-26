@@ -25,7 +25,7 @@ curl -X POST localhost:3000/v1/scrape \
 
 That is the entire integration. Add `API_KEYS=key1,key2` and an `x-api-key` header once you take this off localhost.
 
-> Pin a release instead of `latest` with a version tag, e.g. `ghcr.io/therjmurray/browsefleet:1.0.0`. Multi-arch images (`linux/amd64`, `linux/arm64`) are published to GHCR on every tagged release. To build from source instead: `docker build -t browsefleet . && docker run -p 3000:3000 --shm-size=2g browsefleet`. See [`skill.md`](./skill.md) for the full local dev path.
+> `latest` tracks the most recent release. In production, pin to a release tag instead (`:MAJOR.MINOR.PATCH`, e.g. the version on the [latest release](https://github.com/theRJMurray/browsefleet/releases)). Multi-arch images (`linux/amd64`, `linux/arm64`) are published to GHCR for every tagged release. To build from source instead: `docker build -t browsefleet . && docker run -p 3000:3000 --shm-size=2g browsefleet`. See [`skill.md`](./skill.md) for the full local dev path.
 
 ## Features
 

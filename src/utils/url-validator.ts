@@ -132,11 +132,11 @@ function isPrivateIpv4(ip: string): boolean {
 
   const [a, b] = parts;
 
-  if (a === 127) return true; // 127.0.0.0/8 — loopback
-  if (a === 10) return true; // 10.0.0.0/8 — private
+  if (a === 127) return true; // 127.0.0.0/8 loopback
+  if (a === 10) return true; // 10.0.0.0/8 private
   if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12
   if (a === 192 && b === 168) return true; // 192.168.0.0/16
-  if (a === 169 && b === 254) return true; // 169.254.0.0/16 — link-local
+  if (a === 169 && b === 254) return true; // 169.254.0.0/16 link-local
   if (a === 0 && b === 0 && parts[2] === 0 && parts[3] === 0) return true; // 0.0.0.0
 
   return false;
