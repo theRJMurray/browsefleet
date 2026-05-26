@@ -4,6 +4,13 @@ All notable changes to BrowseFleet are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1](https://github.com/theRJMurray/browsefleet/compare/v1.0.0...v1.0.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* green CI + close IPv6 SSRF bypass + auto-publish release Docker images ([#19](https://github.com/theRJMurray/browsefleet/issues/19)) ([3f3c472](https://github.com/theRJMurray/browsefleet/commit/3f3c472357091c38f97e38cb9f38283f08e5324b))
+
 ## 1.0.0 (2026-05-22)
 
 
