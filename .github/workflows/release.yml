@@ -25,6 +25,9 @@ jobs:
   # release-please cuts the git tag with GITHUB_TOKEN, which cannot trigger the
   # tag-push event the Docker workflow listens for. So build + push the
   # semver-tagged multi-arch image here, in the same run, when a release lands.
+  # Assumes release tags are only ever cut by release-please's bot token. If a
+  # human ever pushes a v*.*.* tag with a PAT, docker.yml's tag-push trigger will
+  # also fire and the two jobs can race on the same GHCR tags.
   docker:
     name: docker
     needs: release-please

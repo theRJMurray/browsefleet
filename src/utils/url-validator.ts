@@ -49,56 +49,95 @@ function assertNotPrivateIp(ip: string): void {
   }
 }
 
-/**
- * Extracts the embedded IPv4 address from the tail of an IPv4-mapped IPv6
- * address (the part after `::ffff:`). Accepts either dotted-quad (`127.0.0.1`)
- * or the two-hextet form Node normalizes to (`7f00:1`). Returns null if the
- * tail is not a recognizable IPv4 embedding.
- */
-function embeddedIpv4(tail: string): string | null {
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(tail)) return tail;
-  const groups = tail.split(':');
-  if (groups.length !== 2) return null;
-  const hi = parseInt(groups[0] || '0', 16);
-  const lo = parseInt(groups[1] || '0', 16);
-  if (Number.isNaN(hi) || Number.isNaN(lo) || hi > 0xffff || lo > 0xffff) return null;
-  return `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
+function isPrivateIp(ip: string): boolean {
+  return isIPv6(ip) ? isPrivateIpv6(ip) : isPrivateIpv4(ip);
 }
 
-function isPrivateIp(ip: string): boolean {
-  // IPv6
-  const lower = ip.toLowerCase();
-  if (lower === '::1') return true; // loopback
-  if (lower === '::') return true; // unspecified
-  if (lower.startsWith('fd')) return true; // fd00::/8 unique local
-  if (lower.startsWith('fe80')) return true; // link-local
-  // IPv4-mapped IPv6 (::ffff:a.b.c.d) — range-check the embedded IPv4 address.
-  // Node normalizes the dotted tail to two hex hextets (::ffff:7f00:1 for
-  // 127.0.0.1), so handle both the dotted and hextet representations.
-  if (lower.startsWith('::ffff:')) {
-    const tail = lower.slice('::ffff:'.length);
-    const embedded = embeddedIpv4(tail);
-    if (embedded) return isPrivateIp(embedded);
+/**
+ * Expands an IPv6 address into its eight 16-bit hextets. Handles `::`
+ * compression and a trailing embedded IPv4 dotted-quad (`::ffff:127.0.0.1`).
+ * Returns null if the string is not parseable as IPv6.
+ */
+function expandIpv6(ip: string): number[] | null {
+  let s = ip.toLowerCase();
+
+  // Fold a trailing embedded IPv4 (a.b.c.d) into two hextets.
+  const v4 = s.match(/(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (v4) {
+    const oct = v4.slice(1, 5).map(Number);
+    if (oct.some((o) => o > 255)) return null;
+    const hi = ((oct[0] << 8) | oct[1]).toString(16);
+    const lo = ((oct[2] << 8) | oct[3]).toString(16);
+    s = s.slice(0, v4.index) + `${hi}:${lo}`;
   }
 
-  // IPv4
+  const halves = s.split('::');
+  if (halves.length > 2) return null;
+
+  const parseGroups = (part: string): number[] | null => {
+    if (part === '') return [];
+    const out: number[] = [];
+    for (const g of part.split(':')) {
+      if (!/^[0-9a-f]{1,4}$/.test(g)) return null;
+      out.push(parseInt(g, 16));
+    }
+    return out;
+  };
+
+  const head = parseGroups(halves[0]);
+  const tail = halves.length === 2 ? parseGroups(halves[1]) : [];
+  if (head === null || tail === null) return null;
+
+  if (halves.length === 2) {
+    const fill = 8 - head.length - tail.length;
+    if (fill < 0) return null;
+    return [...head, ...new Array<number>(fill).fill(0), ...tail];
+  }
+  return head.length === 8 ? head : null;
+}
+
+function isPrivateIpv6(ip: string): boolean {
+  const h = expandIpv6(ip);
+  if (!h) return false;
+
+  // :: unspecified
+  if (h.every((x) => x === 0)) return true;
+  // ::1 loopback
+  if (h.slice(0, 7).every((x) => x === 0) && h[7] === 1) return true;
+  // fc00::/7 unique local (covers both fc00::/8 and fd00::/8)
+  if ((h[0] & 0xfe00) === 0xfc00) return true;
+  // fe80::/10 link-local
+  if ((h[0] & 0xffc0) === 0xfe80) return true;
+
+  // IPv4-in-IPv6 embeddings: range-check the trailing 32 bits. Covers the
+  // mapped (::ffff:0:0/96), translatable (::ffff:0:0:0/96), NAT64
+  // (64:ff9b::/96), and deprecated compatible (::/96) prefixes.
+  const z = (lo: number, hi: number) => h.slice(lo, hi).every((x) => x === 0);
+  const mapped = z(0, 5) && h[5] === 0xffff;
+  const translatable = z(0, 4) && h[4] === 0xffff && h[5] === 0;
+  const nat64 = h[0] === 0x64 && h[1] === 0xff9b && z(2, 6);
+  const compatible = z(0, 6);
+  if (mapped || translatable || nat64 || compatible) {
+    return isPrivateIpv4(`${(h[6] >> 8) & 0xff}.${h[6] & 0xff}.${(h[7] >> 8) & 0xff}.${h[7] & 0xff}`);
+  }
+
+  return false;
+}
+
+function isPrivateIpv4(ip: string): boolean {
   const parts = ip.split('.').map(Number);
-  if (parts.length !== 4) return false;
+  if (parts.length !== 4 || parts.some((p) => Number.isNaN(p) || p < 0 || p > 255)) {
+    return false;
+  }
 
   const [a, b] = parts;
 
-  // 127.0.0.0/8 — loopback
-  if (a === 127) return true;
-  // 10.0.0.0/8 — private
-  if (a === 10) return true;
-  // 172.16.0.0/12
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  // 192.168.0.0/16
-  if (a === 192 && b === 168) return true;
-  // 169.254.0.0/16 — link-local
-  if (a === 169 && b === 254) return true;
-  // 0.0.0.0
-  if (a === 0 && b === 0 && parts[2] === 0 && parts[3] === 0) return true;
+  if (a === 127) return true; // 127.0.0.0/8 — loopback
+  if (a === 10) return true; // 10.0.0.0/8 — private
+  if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12
+  if (a === 192 && b === 168) return true; // 192.168.0.0/16
+  if (a === 169 && b === 254) return true; // 169.254.0.0/16 — link-local
+  if (a === 0 && b === 0 && parts[2] === 0 && parts[3] === 0) return true; // 0.0.0.0
 
   return false;
 }

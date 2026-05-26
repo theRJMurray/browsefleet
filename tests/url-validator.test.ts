@@ -57,6 +57,30 @@ describe('validateUrl', () => {
       await expect(validateUrl('http://[::ffff:10.0.0.1]/')).rejects.toThrow(/private\/reserved/);
     });
 
+    it('blocks fc00::/7 unique-local (fc half)', async () => {
+      await expect(validateUrl('http://[fc00::1]/')).rejects.toThrow(/private\/reserved/);
+    });
+
+    it('blocks fd00::/8 unique-local', async () => {
+      await expect(validateUrl('http://[fd12:3456::1]/')).rejects.toThrow(/private\/reserved/);
+    });
+
+    it('blocks fe80::/10 link-local', async () => {
+      await expect(validateUrl('http://[fe80::1]/')).rejects.toThrow(/private\/reserved/);
+    });
+
+    it('blocks NAT64-embedded loopback 64:ff9b::7f00:1', async () => {
+      await expect(validateUrl('http://[64:ff9b::7f00:1]/')).rejects.toThrow(/private\/reserved/);
+    });
+
+    it('blocks translatable-mapped loopback ::ffff:0:7f00:1', async () => {
+      await expect(validateUrl('http://[::ffff:0:7f00:1]/')).rejects.toThrow(/private\/reserved/);
+    });
+
+    it('does NOT block a public IPv6 literal', async () => {
+      await expect(validateUrl('http://[2606:4700::1111]/')).resolves.toBeUndefined();
+    });
+
     it('blocks 10.0.0.0/8 private range', async () => {
       await expect(validateUrl('http://10.5.5.5/')).rejects.toThrow(/private\/reserved/);
     });
