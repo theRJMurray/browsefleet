@@ -1,5 +1,4 @@
 import { Hono } from 'hono';
-import type { Cookie } from 'puppeteer-core';
 import { v4 as uuid } from 'uuid';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
 import { config } from '../config.js';
@@ -90,16 +89,4 @@ export function profilesRoutes(): Hono {
   });
 
   return app;
-}
-
-// Helpers for session integration
-export function loadProfileCookies(profileId: string): Cookie[] {
-  const path = `${profilesDir()}/${profileId}/cookies.json`;
-  if (!existsSync(path)) return [];
-  return JSON.parse(readFileSync(path, 'utf-8'));
-}
-
-export function saveProfileCookies(profileId: string, cookies: Cookie[]): void {
-  const path = `${profilesDir()}/${profileId}/cookies.json`;
-  writeFileSync(path, JSON.stringify(cookies, null, 2));
 }

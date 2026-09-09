@@ -44,8 +44,12 @@ export function recordSessionStart(
 
 /**
  * better-sqlite3 returns `unknown` from `get`/`all`, correctly: it cannot know a query's shape.
- * These types are the contract between each SELECT above and the code reading it, so changing a
- * column name breaks the read at compile time rather than at runtime as an undefined.
+ * These name the shape each SELECT is expected to produce.
+ *
+ * They are assertions, not proof. TypeScript never parses the SQL, so renaming a column in a
+ * query string still compiles and still yields `undefined` at runtime. What they do catch is
+ * drift in the other direction: a field read that no declared row has, and a `.get()` result
+ * used without handling the missing row.
  */
 type SessionRow = { api_key: string; created_at: string };
 type CountRow = { c: number };
@@ -110,8 +114,11 @@ export function getUsageStats(apiKey?: string): UsageStats {
   const key = apiKey ?? 'anonymous';
 
   const totalSessions =
-    (db.prepare('SELECT count(*) as c FROM sessions WHERE api_key = ?').get(key) as CountRow | undefined)
-      ?.c ?? 0;
+    (
+      db.prepare('SELECT count(*) as c FROM sessions WHERE api_key = ?').get(key) as
+        | CountRow
+        | undefined
+    )?.c ?? 0;
 
   const activeSessions =
     (

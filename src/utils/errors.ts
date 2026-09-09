@@ -24,9 +24,9 @@ export function errorMessage(err: unknown): string {
 }
 
 /**
- * The HTTP status a thrown value asks for, when it carries one. `getOwnedSession` throws
- * `{ status }` to mean 403 rather than 404, and route handlers need to read that back without
- * asserting the shape.
+ * The HTTP status a thrown value asks for, when it carries one. `getOwnedSession` attaches
+ * `status: 404`, and `assertAgentControl` attaches `409`, so route handlers need to read that
+ * back without asserting the shape of what was thrown.
  *
  * Anything outside the 4xx and 5xx range is ignored rather than forwarded. A thrown object
  * carrying `status: 200` is a bug somewhere upstream, and turning a failure into a success

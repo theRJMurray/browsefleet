@@ -53,6 +53,7 @@ function terminalEvent(result: AgentResult): StreamEvent {
     case 'llm_error':
       return { type: 'error', error, iteration: result.totalIterations - 1 };
     case 'no_api_key':
+    case 'aborted':
       return { type: 'error', error };
     default:
       return { type: 'error', error, totalIterations: result.totalIterations };
@@ -62,7 +63,7 @@ function terminalEvent(result: AgentResult): StreamEvent {
 export function agentRoutes(pool: BrowserPool): Hono {
   const app = new Hono();
 
-  // Autonomous agent — creates a session, runs the task, releases the session
+  // Autonomous agent. Creates a session, runs the task, releases the session.
   // POST /v1/agent
   app.post('/', async (c) => {
     const body = await c.req.json<AgentRequest>().catch(() => null);
@@ -90,7 +91,7 @@ export function agentRoutes(pool: BrowserPool): Hono {
     }
   });
 
-  // Agent on existing session — uses an already-created session
+  // Agent on an existing session, already created by the caller.
   // POST /v1/sessions/:id/agent
   app.post('/:id/agent', async (c) => {
     const apiKey = c.req.header('x-api-key');
@@ -98,7 +99,7 @@ export function agentRoutes(pool: BrowserPool): Hono {
     try {
       session = getOwnedSession(pool, c.req.param('id'), apiKey);
     } catch (err) {
-      return c.json({ error: errorMessage(err) }, (errorStatus(err) ?? 404) as 403 | 404);
+      return c.json({ error: errorMessage(err) }, errorStatus(err) ?? 404);
     }
 
     const body = await c.req.json<AgentRequest>().catch(() => null);
@@ -110,7 +111,7 @@ export function agentRoutes(pool: BrowserPool): Hono {
     return c.json({ ...result, steps: stripIntermediateScreenshots(result.steps) });
   });
 
-  // Agent streaming — SSE stream of agent steps as they happen
+  // Agent streaming. SSE stream of agent steps as they happen.
   // POST /v1/agent/stream
   //
   // This is the same `runAgent` the two routes above call, subscribed to rather than
@@ -130,23 +131,39 @@ export function agentRoutes(pool: BrowserPool): Hono {
 
     const activeSession = session;
 
+    // A vision agent run costs a model call per iteration, up to thirty of them. If the client
+    // hangs up, every one of those is spent on nobody, so a disconnect has to reach the loop.
+    const abort = new AbortController();
+
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
         let closed = false;
         const safeClose = () => {
-          if (!closed) {
-            closed = true;
+          if (closed) return;
+          closed = true;
+          try {
             controller.close();
+          } catch {
+            // Already closed by the client's cancel. Nothing to do.
           }
         };
         const emit = (event: StreamEvent) => {
-          if (!closed) controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+          if (closed) return;
+          try {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+          } catch {
+            // `enqueue` throws on every call after the stream is cancelled. The client is
+            // gone, so stop producing and tell the run to stop too.
+            closed = true;
+            abort.abort();
+          }
         };
 
         try {
           const page = await activeSession.getPage();
           const result = await runAgent(page, request, {
+            signal: abort.signal,
             onScreenshot: (iteration, screenshot) =>
               emit({ type: 'screenshot', iteration, screenshot }),
             onStep: (step) =>
@@ -166,6 +183,11 @@ export function agentRoutes(pool: BrowserPool): Hono {
           await pool.releaseSession(activeSession.id);
           safeClose();
         }
+      },
+      // Fired when the response socket closes. That is the ordinary way a streaming client
+      // ends a run: a closed browser tab, a Ctrl-C on a curl, a proxy timeout.
+      cancel() {
+        abort.abort();
       },
     });
 

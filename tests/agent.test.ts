@@ -190,11 +190,14 @@ describe('runAgent events', () => {
     const { page } = recordingPage();
     const order: string[] = [];
     const steps: AgentStep[] = [];
+    // Captured, not asserted, inside the callback. `runAgent` swallows what a subscriber
+    // throws, which includes a failed expectation, so an assertion in here can never fail.
+    const screenshots: string[] = [];
 
     await runAgent(page, request, {
       onScreenshot: (iteration, screenshot) => {
         order.push(`screenshot:${iteration}`);
-        expect(screenshot).toBe('ZmFrZS1zY3JlZW5zaG90');
+        screenshots.push(screenshot);
       },
       onStep: (step) => {
         order.push(`step:${step.iteration}`);
@@ -203,7 +206,43 @@ describe('runAgent events', () => {
     });
 
     expect(order).toEqual(['screenshot:0', 'step:0']);
+    expect(screenshots).toEqual(['ZmFrZS1zY3JlZW5zaG90']);
     expect(steps[0].actions).toEqual<AgentAction[]>([{ type: 'done', result: '42' }]);
+  });
+
+  it('stops at the next iteration once its signal is aborted', async () => {
+    const { fetchMock } = stubModel([
+      JSON.stringify({ reasoning: 'still looking', actions: [{ type: 'wait', duration: 1 }] }),
+    ]);
+    const { page } = recordingPage();
+    const abort = new AbortController();
+
+    const result = await runAgent(
+      page,
+      { ...request, maxIterations: 30 },
+      {
+        signal: abort.signal,
+        onStep: () => abort.abort(),
+      },
+    );
+
+    expect(result.failure).toBe('aborted');
+    // One call made, then the abort landed. Without the check the loop would run all 30.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.totalIterations).toBe(1);
+  });
+
+  it('does not run the actions of a step whose model call outlived the caller', async () => {
+    stubModel([
+      JSON.stringify({ reasoning: 'click it', actions: [{ type: 'click', x: 10, y: 10 }] }),
+    ]);
+    const { page, calls } = recordingPage();
+    const abort = new AbortController();
+
+    await runAgent(page, request, { signal: abort.signal, onStep: () => abort.abort() });
+
+    // Actions have side effects on a real page. A run nobody is watching must not click.
+    expect(calls).toEqual([]);
   });
 
   it('does not abandon the run when a subscriber throws', async () => {
@@ -324,6 +363,63 @@ describe('POST /v1/agent/stream', () => {
     const events = await readEvents(res);
 
     expect(events).toEqual([{ type: 'error', error: 'browser crashed' }]);
+    expect(released).toEqual(['sess-1']);
+  });
+
+  it('reports a provider failure as an error carrying the iteration it happened on', async () => {
+    vi.unstubAllGlobals();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('upstream is down', { status: 529 })),
+    );
+    const { page } = recordingPage();
+    const { pool } = fakePool(page);
+
+    const res = await agentRoutes(pool).request(streamRequest(request));
+    const events = await readEvents(res);
+
+    const last = events[events.length - 1];
+    expect(last).toMatchObject({ type: 'error', iteration: 0 });
+    expect(String(last.error)).toContain('529');
+  });
+
+  it('reports a missing key as an error, before any iteration happens', async () => {
+    const { page } = recordingPage();
+    const { pool } = fakePool(page);
+
+    const res = await agentRoutes(pool).request(
+      streamRequest({ task: 'find the answer', provider: 'anthropic' }),
+    );
+    const events = await readEvents(res);
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ type: 'error' });
+    expect(String(events[0].error)).toMatch(/No API key/i);
+    // No `iteration` and no `totalIterations`: nothing ran.
+    expect(events[0].iteration).toBeUndefined();
+  });
+
+  it('stops the run when the client hangs up mid-stream', async () => {
+    // The whole reason the loop takes a signal. A vision run is up to thirty model calls, and
+    // a streaming client disconnecting is the ordinary case, not an edge one: a closed tab, a
+    // Ctrl-C, a proxy timeout. Before the signal existed, `emit` threw into the subscriber
+    // guard, which swallowed it, and the run continued to the ceiling for nobody.
+    vi.unstubAllGlobals();
+    const { fetchMock } = stubModel([
+      JSON.stringify({ reasoning: 'still looking', actions: [{ type: 'wait', duration: 1 }] }),
+    ]);
+    const { page } = recordingPage();
+    const { pool, released } = fakePool(page);
+
+    const res = await agentRoutes(pool).request(streamRequest({ ...request, maxIterations: 30 }));
+    const reader = res.body!.getReader();
+    await reader.read();
+    await reader.cancel();
+
+    // Let the loop notice. Without the signal this settles at 30.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(fetchMock.mock.calls.length).toBeLessThan(5);
     expect(released).toEqual(['sess-1']);
   });
 

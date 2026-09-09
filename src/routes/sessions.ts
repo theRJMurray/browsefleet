@@ -107,7 +107,7 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
     return c.json({ released: count });
   });
 
-  // Live viewer (SSE — streams screenshots)
+  // Live viewer (SSE, streams screenshots)
   app.get('/:id/live', async (c) => {
     const apiKey = c.req.header('x-api-key');
     let session;

@@ -120,7 +120,9 @@ function isPrivateIpv6(ip: string): boolean {
   const nat64 = h[0] === 0x64 && h[1] === 0xff9b && z(2, 6);
   const compatible = z(0, 6);
   if (mapped || translatable || nat64 || compatible) {
-    return isPrivateIpv4(`${(h[6] >> 8) & 0xff}.${h[6] & 0xff}.${(h[7] >> 8) & 0xff}.${h[7] & 0xff}`);
+    return isPrivateIpv4(
+      `${(h[6] >> 8) & 0xff}.${h[6] & 0xff}.${(h[7] >> 8) & 0xff}.${h[7] & 0xff}`,
+    );
   }
 
   return false;

@@ -295,26 +295,27 @@ Requires `ANTHROPIC_API_KEY` (for `provider:"anthropic"`) or `OPENAI_API_KEY` (f
 
 When `success` is `false`, `failure` says why, so a caller can tell the agent giving up apart from the call to the model failing:
 
-| `failure`         | Meaning                                                                                  |
-| ----------------- | ---------------------------------------------------------------------------------------- |
-| `agent_fail`      | The model emitted a `fail` action, or answered with something that was not the JSON contract. |
-| `llm_error`       | The provider call failed. `error` carries the status and body.                            |
-| `no_api_key`      | No key was configured or passed for the selected provider. Nothing ran.                   |
-| `max_iterations`  | The loop hit its ceiling without a terminal action.                                       |
+| `failure`        | Meaning                                                                                       |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| `agent_fail`     | The model emitted a `fail` action, or answered with something that was not the JSON contract. |
+| `llm_error`      | The provider call failed. `error` carries the status and body.                                |
+| `no_api_key`     | No key was configured or passed for the selected provider. Nothing ran.                       |
+| `max_iterations` | The loop hit its ceiling without a terminal action.                                           |
+| `aborted`        | The streaming client disconnected, so the run stopped rather than finishing for nobody.       |
 
 ### `POST /v1/agent/stream`
 
-Streaming variant that creates an ephemeral session and emits server-sent events as the agent runs. The session is released automatically when the stream ends, including when it ends badly.
+Streaming variant that creates an ephemeral session and emits server-sent events as the agent runs. The session is released automatically when the stream ends, including when it ends badly. Closing the connection aborts the run at the next iteration rather than letting it finish for nobody.
 
 Each event is a JSON object with a `type` field:
 
-| `type`       | Fields                                    | When                                                        |
-| ------------ | ----------------------------------------- | ----------------------------------------------------------- |
-| `screenshot` | `iteration`, `screenshot`                 | Once per iteration, carrying the frame the model is about to be shown. |
-| `step`       | `iteration`, `reasoning`, `actions`       | After the model responds.                                    |
-| `done`       | `result`, `totalIterations`               | The agent completed the task.                                |
-| `fail`       | `reason`, `totalIterations`               | The agent decided it could not.                              |
-| `error`      | `error`, and `iteration` or `totalIterations` when known | The model call failed, the session died, or the loop hit its ceiling. |
+| `type`       | Fields                                                   | When                                                                                                         |
+| ------------ | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `screenshot` | `iteration`, `screenshot`                                | Once per iteration, carrying the frame the model is about to be shown.                                       |
+| `step`       | `iteration`, `reasoning`, `actions`                      | After the model responds. A reply that is not the JSON contract appears here as a synthesized `fail` action. |
+| `done`       | `result`, `totalIterations`                              | The agent completed the task.                                                                                |
+| `fail`       | `reason`, `totalIterations`                              | The agent decided it could not.                                                                              |
+| `error`      | `error`, and `iteration` or `totalIterations` when known | The model call failed, the session died, or the loop hit its ceiling.                                        |
 
 Exactly one terminal event (`done`, `fail`, or `error`) is emitted before the stream closes. A stream that closes without one means the connection dropped, not that the run finished.
 

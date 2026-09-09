@@ -86,7 +86,24 @@ You can also pass a per-request API key in the `apiKey` field of the body to ove
 - **Cost.** Each iteration sends one full-page screenshot to the model. Screenshots are large (~100 KB to ~1 MB depending on viewport). At 10 iterations per task you are looking at roughly 5 to 10 MB of image input, plus the model's text output. Budget accordingly.
 - **Loops.** `maxIterations` caps the number of model rounds. The server default is 15 and the hard ceiling is 30. Bring it down for predictable cost.
 - **Hallucination.** The agent will sometimes claim a task is complete when it is not, or claim a fact that is wrong. Use the `success` flag and `result` text as a hint, not as ground truth. For high-stakes flows, verify with a second pass or a deterministic check.
-- **Cost runaway protection.** If a task hits `maxIterations` without finishing, the agent returns `{ success: false, error: "Agent reached maximum iterations (<N>) without completing the task" }`. The browser session is still released.
+- **Cost runaway protection.** If a task hits `maxIterations` without finishing, the agent returns `{ success: false, failure: "max_iterations", error: "Agent reached maximum iterations (<N>) without completing the task" }`. The browser session is still released.
+- **Disconnects stop the run.** A `/v1/agent/stream` client that closes the connection aborts the loop at the next iteration, so a closed tab does not go on paying for model calls nobody will read. The result is `failure: "aborted"`.
+
+## Why a run ended
+
+Every unsuccessful `AgentResult` carries a `failure` discriminator, because "the agent decided it could not do this" and "the call to the model failed" are the same `success: false` and mean entirely different things to a caller.
+
+| `failure`        | Meaning                                                                                       |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| `agent_fail`     | The model emitted a `fail` action, or answered with something that was not the JSON contract. |
+| `llm_error`      | The provider call failed. `error` carries the status and body.                                |
+| `no_api_key`     | No key was configured or passed for the selected provider. Nothing ran.                       |
+| `max_iterations` | The loop hit its ceiling without a terminal action.                                           |
+| `aborted`        | The caller went away. Only reachable through the streaming route.                             |
+
+A model reply that cannot be parsed as the JSON contract is turned into a synthesized `fail` action, so it appears in the step trace as an action the model did not literally send. That is deliberate: the alternative is an empty step, which is indistinguishable from the model doing nothing and silently burns the whole iteration budget.
+
+The full streaming event contract is in [api.md](./api.md#post-v1agentstream), which also documents `/v1/agent/stream`, absent from this page until now.
 
 ## Available actions
 

@@ -23,7 +23,7 @@ export function createCdpProxy(
 
     const sessionId = match[1];
 
-    // Auth check — apiKey in query string is necessary for WebSocket clients
+    // Auth check. apiKey in the query string is necessary for WebSocket clients.
     // that cannot set custom HTTP headers (e.g. browser WebSocket API)
     if (config.authEnabled) {
       const apiKey = url.searchParams.get('apiKey') ?? (req.headers['x-api-key'] as string);

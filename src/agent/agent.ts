@@ -38,7 +38,7 @@ export type AgentAction =
  * the task apart from the LLM call failing, which are the same `success: false` today and mean
  * completely different things to whoever is watching.
  */
-export type AgentFailure = 'agent_fail' | 'llm_error' | 'no_api_key' | 'max_iterations';
+export type AgentFailure = 'agent_fail' | 'llm_error' | 'no_api_key' | 'max_iterations' | 'aborted';
 
 export interface AgentResult {
   success: boolean;
@@ -53,18 +53,25 @@ export interface AgentResult {
 /**
  * Progress callbacks, so a streaming transport can report the run as it happens instead of
  * reimplementing the loop around its own emitter. That reimplementation is exactly what
- * `POST /v1/agent/stream` used to be, and it drifted: it skipped the `res.ok` check, dropped
- * the humanized typing delay, turned an unparseable model response into a silent no-op instead
- * of a failure, and never told the client the run had hit its iteration ceiling.
+ * `POST /v1/agent/stream` used to be, and it drifted: it skipped the `res.ok` check, flattened
+ * the humanized typing delay to a constant, turned an unparseable model response into a silent
+ * no-op instead of a failure, and never told the client the run had hit its iteration ceiling.
  *
- * A callback that throws is logged and swallowed. A consumer that cannot keep up with its own
- * event stream is not a reason to abandon a browser session mid-task.
+ * A callback that throws is logged and the run continues. A subscriber bug is not a reason to
+ * abandon a browser session mid-task. A subscriber that has *gone* is a different thing
+ * entirely, and that is what `signal` is for: swallowing the throw from a dead transport would
+ * otherwise leave the loop calling a vision model for nobody.
  */
 export interface AgentEvents {
   /** Fired once per iteration, with the screenshot the model is about to be shown. */
   onScreenshot?(iteration: number, screenshot: string): void | Promise<void>;
   /** Fired after the model responds, with the step just recorded. */
   onStep?(step: AgentStep): void | Promise<void>;
+  /**
+   * Aborts the run. Checked before each iteration and again before executing actions, so a
+   * cancelled run costs at most the model call already in flight.
+   */
+  signal?: AbortSignal;
 }
 
 // ─── LLM Providers ─────────────────────────────────────────────────────────
@@ -260,7 +267,18 @@ export async function runAgent(
   const steps: AgentStep[] = [];
   const callLLM = provider === 'anthropic' ? callAnthropic : callOpenAI;
 
+  /** The caller has gone. Stop where we are rather than paying for the rest of the run. */
+  const abandoned = (iterations: number): AgentResult => ({
+    success: false,
+    failure: 'aborted',
+    error: 'Run aborted before completion',
+    steps,
+    totalIterations: iterations,
+  });
+
   for (let i = 0; i < maxIterations; i++) {
+    if (events.signal?.aborted) return abandoned(i);
+
     // Take screenshot
     const screenshotBuffer = (await page.screenshot({ encoding: 'base64', type: 'png' })) as string;
     if (events.onScreenshot) await notify(() => events.onScreenshot!(i, screenshotBuffer));
@@ -321,6 +339,11 @@ export async function runAgent(
         };
       }
     }
+
+    // Checked again here because the model call above can take many seconds, which is the
+    // window a client is most likely to disappear in. Actions have side effects on a real
+    // page, so not running them is worth the extra check.
+    if (events.signal?.aborted) return abandoned(i + 1);
 
     // Execute non-terminal actions
     for (const action of response.actions) {
