@@ -6,8 +6,8 @@ BrowseFleet is in active development. We support the latest minor release on the
 
 | Version          | Supported |
 | ---------------- | --------- |
-| `0.x.x` (latest) | yes       |
-| older            | no        |
+| `1.x.x` (latest) | yes       |
+| `0.x.x`          | no        |
 
 ## Reporting a vulnerability
 

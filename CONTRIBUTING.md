@@ -59,7 +59,7 @@ A clean review pass plus green CI is the merge gate. We squash-merge by default.
 ## What we will not accept
 
 - Adding telemetry or phone-home behavior. BrowseFleet runs on operator-owned infrastructure and stays silent.
-- Reintroducing the billing / hosted-SaaS path that was removed during the OSS conversion. See [`docs/projects/browsefleet-oss/decisions/ADR-0001-pure-oss-mit.md`](https://github.com/theRJMurray/overlord/blob/development/docs/projects/browsefleet-oss/decisions/ADR-0001-pure-oss-mit.md) in the upstream Overlord repo for the rationale.
+- Reintroducing the billing / hosted-SaaS path that was removed during the OSS conversion. See [ADR-0001](./docs/decisions/ADR-0001-pure-oss-mit.md) for the rationale.
 - Stealth or anti-detection improvements aimed specifically at evading bot detection on sites that have explicitly opted out via `robots.txt` or terms of service. We are not in the abuse-enablement business.
 
 ## Security issues

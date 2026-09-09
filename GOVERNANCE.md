@@ -8,7 +8,7 @@ This is honest about the project's stage. As the contributor base grows, governa
 
 - **Small changes** (bug fixes, docs, minor features): a clean PR with green CI and one maintainer approval merges. Default reviewer is the BDFL.
 - **Significant changes** (new endpoints, breaking API changes, dependency swaps, removal of a feature): open an Issue describing the proposal first. Wait for explicit BDFL acknowledgement before investing significant implementation time.
-- **Project direction** (license, hosted offering, brand, major architectural pivots): documented as Architecture Decision Records in [`docs/projects/browsefleet-oss/decisions/`](https://github.com/theRJMurray/overlord/tree/development/docs/projects/browsefleet-oss/decisions) in the upstream Overlord repo. The first one, ADR-0001, locks in MIT + pure-OSS + the four-repo scope.
+- **Project direction** (license, hosted offering, brand, major architectural pivots): documented as Architecture Decision Records in [`docs/decisions/`](./docs/decisions/). The first one, [ADR-0001](./docs/decisions/ADR-0001-pure-oss-mit.md), locks in MIT + pure-OSS + the four-repo scope.
 
 ## What a contributor can rely on
 

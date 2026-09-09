@@ -240,7 +240,7 @@ Configure target tracking on CPU utilization (target 50%) or on the number of ac
 
 ## What we deliberately do not offer
 
-- A hosted SaaS version. BrowseFleet is the product; running it is on you. See [ADR-0001](https://github.com/theRJMurray/overlord/blob/development/docs/projects/browsefleet-oss/decisions/ADR-0001-pure-oss-mit.md).
+- A hosted SaaS version. BrowseFleet is the product; running it is on you. See [ADR-0001](./decisions/ADR-0001-pure-oss-mit.md).
 - Kubernetes Helm charts. Out of scope for now; PRs welcome.
 - A Terraform module. Same.
 

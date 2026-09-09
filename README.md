@@ -90,19 +90,25 @@ curl -X POST localhost:3000/v1/screenshot \
 ```
 
 ```ts
-// Node (consume via SDK once published; pre-publish, the example uses a relative path)
-import { BrowseFleet } from 'browsefleet';
-const bf = new BrowseFleet({ apiUrl: 'http://localhost:3000' });
-const { markdown } = await bf.scrape({ url: 'https://example.com' });
+// Node. No SDK and no dependencies, just the REST API.
+// Full version: examples/node-quickstart/index.ts
+const res = await fetch('http://localhost:3000/v1/scrape', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ url: 'https://example.com' }),
+});
+const { markdown } = await res.json();
 console.log(markdown);
 ```
 
 ```py
-# Python
-from browsefleet import BrowseFleet
-bf = BrowseFleet(api_url='http://localhost:3000')
-result = bf.scrape(url='https://example.com')
-print(result.markdown)
+# Python. httpx against the same endpoint.
+# Full version: examples/python-quickstart/main.py
+import httpx
+
+res = httpx.post('http://localhost:3000/v1/scrape',
+                 json={'url': 'https://example.com'}, timeout=60)
+print(res.json()['markdown'])
 ```
 
 Full examples in [`examples/`](./examples/): `curl/`, `node-quickstart/`, `python-quickstart/`, `operator-mode/`, `cdp-direct/`.

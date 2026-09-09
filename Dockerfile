@@ -53,7 +53,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 LABEL org.opencontainers.image.title="BrowseFleet" \
       org.opencontainers.image.description="Self-hosted cloud browser API for AI agents." \
-      org.opencontainers.image.url="https://browsefleet.com" \
+      org.opencontainers.image.url="https://github.com/theRJMurray/browsefleet" \
       org.opencontainers.image.source="https://github.com/theRJMurray/browsefleet" \
       org.opencontainers.image.documentation="https://github.com/theRJMurray/browsefleet/blob/master/README.md" \
       org.opencontainers.image.licenses="MIT" \

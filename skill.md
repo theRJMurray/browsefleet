@@ -118,7 +118,13 @@ npm run docker:run     # runs it on port 3000 with --shm-size=2g
 
 `--shm-size=2g` is mandatory. Chrome crashes on the default 64 MB.
 
-The official image once published lives at `ghcr.io/therjmurray/browsefleet:<tag>`. Publishing is set up in Phase 3 of the OSS arc; until then, build locally.
+The official image is published at `ghcr.io/therjmurray/browsefleet:<tag>` and is public, so it needs no login to pull. `latest`, `1`, `1.0` and `1.0.1` are all available:
+
+```bash
+docker run -p 3000:3000 --shm-size=2g ghcr.io/therjmurray/browsefleet:latest
+```
+
+Build locally only when you are changing the image itself.
 
 ## Verifying it works (smoke test)
 
@@ -337,7 +343,7 @@ Or use `/actions` with `controlMode:"agent"` set at session-creation time.
 - **Do not commit `.env`.** It is gitignored. Use `.env.example` for documenting variables.
 - **Do not add a dependency with native bindings (`better-sqlite3`, `sharp`, `node-ffi`, etc.) without updating the `Dockerfile` to install the matching build tools.** The container build will fail otherwise.
 - **Do not bump the Node major version in `.nvmrc` without also bumping the `Dockerfile` base image.** Mismatch will cause `better-sqlite3` ABI errors at runtime.
-- **Do not reintroduce a hosted billing / Stripe path.** It was removed deliberately when the project went open-source. The rationale is in [`docs/projects/browsefleet-oss/decisions/ADR-0001-pure-oss-mit.md`](https://github.com/theRJMurray/overlord/blob/development/docs/projects/browsefleet-oss/decisions/ADR-0001-pure-oss-mit.md) in the upstream Overlord repo.
+- **Do not reintroduce a hosted billing / Stripe path.** It was removed deliberately when the project went open-source. The rationale is in [ADR-0001](./docs/decisions/ADR-0001-pure-oss-mit.md).
 - **Do not add telemetry, phone-home, or auto-update behavior.** This project runs on operator infrastructure and stays silent.
 
 ## Where to ask
