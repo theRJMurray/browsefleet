@@ -150,8 +150,12 @@ export function agentRoutes(pool: BrowserPool): Hono {
         };
         const emit = (event: StreamEvent) => {
           if (closed) return;
+          // Serialized outside the try on purpose. Only `enqueue` can mean "the client is
+          // gone"; a serialization bug caught here would abort agent runs and report itself
+          // as a disconnect, which is close to undiagnosable.
+          const frame = encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
           try {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+            controller.enqueue(frame);
           } catch {
             // `enqueue` throws on every call after the stream is cancelled. The client is
             // gone, so stop producing and tell the run to stop too.

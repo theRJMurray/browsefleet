@@ -68,8 +68,13 @@ export interface AgentEvents {
   /** Fired after the model responds, with the step just recorded. */
   onStep?(step: AgentStep): void | Promise<void>;
   /**
-   * Aborts the run. Checked before each iteration and again before executing actions, so a
-   * cancelled run costs at most the model call already in flight.
+   * Aborts the run. Checked three times per iteration: before the screenshot, again right
+   * after it is handed to `onScreenshot`, and again after the model answers.
+   *
+   * The middle one is where a streaming transport is usually caught, because a dead connection
+   * announces itself by throwing on the write. Catching it there costs no model call at all.
+   * The other two bound the cases it misses: an already-cancelled run never takes a screenshot,
+   * and a cancel landing during the model call costs that one call and no actions.
    */
   signal?: AbortSignal;
 }

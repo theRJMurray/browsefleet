@@ -232,6 +232,24 @@ describe('runAgent events', () => {
     expect(result.totalIterations).toBe(1);
   });
 
+  it('does not call the model when the transport died while writing the frame', async () => {
+    // How a streaming transport actually announces its death: the enqueue inside the
+    // `onScreenshot` subscriber throws, `emit` catches it and aborts. Caught there, the run
+    // costs no model call at all, which is the whole point of checking at that position.
+    const { fetchMock } = stubModel([DONE]);
+    const { page } = recordingPage();
+    const abort = new AbortController();
+
+    const result = await runAgent(page, request, {
+      signal: abort.signal,
+      onScreenshot: () => abort.abort(),
+    });
+
+    expect(result.failure).toBe('aborted');
+    expect(result.totalIterations).toBe(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('does not run the actions of a step whose model call outlived the caller', async () => {
     stubModel([
       JSON.stringify({ reasoning: 'click it', actions: [{ type: 'click', x: 10, y: 10 }] }),
@@ -434,7 +452,10 @@ describe('POST /v1/agent/stream', () => {
     // creep back under the bound and the test would go green against the bug it exists to pin.
     // The session is released in the `finally`, so it fills in immediately when aborted and not
     // until all 30 iterations are done when not.
-    await vi.waitFor(() => expect(released).toEqual(['sess-1']));
+    // Explicit timeout: against broken code an unaborted 30-iteration run releases in roughly
+    // 450ms, uncomfortably close to the 1000ms default. A slower runner would still fail, but
+    // with "timed out" rather than the count mismatch that says what actually went wrong.
+    await vi.waitFor(() => expect(released).toEqual(['sess-1']), { timeout: 5000 });
 
     // At most one: the cancel lands while the first model call is already in flight, and that
     // call is not cancelled (aborting the `fetch` would surface as an AbortError and get
