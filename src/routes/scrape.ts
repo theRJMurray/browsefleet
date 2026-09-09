@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { errorMessage } from '../utils/errors.js';
 import type { BrowserPool } from '../pool/browser-pool.js';
 import type { ScrapeRequest } from '../types.js';
 import { extractContent } from '../extract/content.js';
@@ -41,8 +42,8 @@ export function scrapeRoutes(pool: BrowserPool): Hono {
       });
 
       return c.json(result);
-    } catch (err: any) {
-      return c.json({ error: err.message }, 500);
+    } catch (err) {
+      return c.json({ error: errorMessage(err) }, 500);
     }
   });
 

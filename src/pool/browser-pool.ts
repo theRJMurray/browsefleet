@@ -6,13 +6,23 @@ import { BrowserSession } from './session.js';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import type { CreateSessionRequest } from '../types.js';
-import type { Browser } from 'puppeteer-core';
+import type { Browser, LaunchOptions } from 'puppeteer-core';
 
 puppeteer.use(StealthPlugin());
 
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { getStealthArgs, randomViewport, randomUserAgent } from '../stealth/stealth.js';
 import { profileExists, profileUserDataDir, touchProfile } from '../routes/profiles.js';
+
+/**
+ * `puppeteer-extra` is typed against the full `puppeteer` package. Its `Browser` is a separate
+ * declaration from `puppeteer-core`'s, so the compiler rejects the assignment even though the
+ * two are the same object at runtime and this project deliberately depends on `puppeteer-core`
+ * alone. Narrowing the plugin host to the single method used here states that mismatch once,
+ * where it can be read, instead of scattering `as any` across the call sites.
+ */
+type StealthLauncher = { launch(options: LaunchOptions): Promise<Browser> };
+const stealthLauncher = puppeteer as unknown as StealthLauncher;
 
 function findChromeSync(): string {
   if (config.chromePath) return config.chromePath;
@@ -119,7 +129,7 @@ export class BrowserPool {
     if (stealth === 'none') {
       browser = await puppeteerCore.launch(launchOpts);
     } else {
-      browser = await (puppeteer as any).launch(launchOpts);
+      browser = await stealthLauncher.launch(launchOpts);
     }
 
     const cdpEndpoint = browser.wsEndpoint();
@@ -223,7 +233,7 @@ export class BrowserPool {
     }
 
     const args = this.buildArgs({});
-    this.utilityBrowser = await (puppeteer as any).launch({
+    this.utilityBrowser = await stealthLauncher.launch({
       headless: true,
       args,
       executablePath: this.chromePath || undefined,

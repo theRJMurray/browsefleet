@@ -6,6 +6,7 @@ import { createApp } from './app.js';
 import { BrowserPool } from './pool/browser-pool.js';
 import { createCdpProxy } from './proxy/cdp-proxy.js';
 import { closeDb } from './db/schema.js';
+import type { Server as HttpServer } from 'node:http';
 
 mkdirSync(config.dataDir, { recursive: true });
 mkdirSync(`${config.dataDir}/profiles`, { recursive: true });
@@ -34,12 +35,16 @@ const server = serve(
   },
 );
 
+// `serve()` is typed as returning a generic server; the Node adapter always hands back an
+// http.Server, and the CDP proxy needs its `upgrade` event to hijack the WebSocket handshake.
+const httpServer = server as unknown as HttpServer;
+
 const cdpProxy = createCdpProxy(pool);
-(server as any).on('upgrade', cdpProxy);
+httpServer.on('upgrade', cdpProxy);
 
 async function shutdown(signal: string) {
   logger.info({ signal }, 'Shutting down...');
-  (server as any).close();
+  httpServer.close();
   await pool.shutdown();
   closeDb();
   logger.info('All sessions released, exiting');

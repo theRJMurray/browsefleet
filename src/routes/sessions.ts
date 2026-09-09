@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { BrowserPool } from '../pool/browser-pool.js';
 import type { ControlSessionRequest, CreateSessionRequest, ReleaseRequest } from '../types.js';
 import { getOwnedSession } from '../utils/session-auth.js';
+import { errorMessage, errorStatus } from '../utils/errors.js';
 
 export function sessionsRoutes(pool: BrowserPool): Hono {
   const app = new Hono();
@@ -14,9 +15,9 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
       const apiKey = c.req.header('x-api-key');
       const session = await pool.createSession(body, apiKey);
       return c.json(session.toApiObject(), 201);
-    } catch (err: any) {
-      const status = err.message?.includes('Maximum') ? 429 : 500;
-      return c.json({ error: err.message }, status);
+    } catch (err) {
+      const message = errorMessage(err);
+      return c.json({ error: message }, message.includes('Maximum') ? 429 : 500);
     }
   });
 
@@ -36,8 +37,8 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
     let session;
     try {
       session = getOwnedSession(pool, c.req.param('id'), apiKey);
-    } catch (e: any) {
-      return c.json({ error: e.message }, e.status ?? 404);
+    } catch (e) {
+      return c.json({ error: errorMessage(e) }, errorStatus(e) ?? 404);
     }
     return c.json(session.toApiObject());
   });
@@ -47,8 +48,8 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
     const apiKey = c.req.header('x-api-key');
     try {
       getOwnedSession(pool, c.req.param('id'), apiKey);
-    } catch (e: any) {
-      return c.json({ error: e.message }, e.status ?? 404);
+    } catch (e) {
+      return c.json({ error: errorMessage(e) }, errorStatus(e) ?? 404);
     }
     const released = await pool.releaseSession(c.req.param('id'));
     if (!released) return c.json({ error: 'Session not found' }, 404);
@@ -61,8 +62,8 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
     let session;
     try {
       session = getOwnedSession(pool, c.req.param('id'), apiKey);
-    } catch (e: any) {
-      return c.json({ error: e.message }, e.status ?? 404);
+    } catch (e) {
+      return c.json({ error: errorMessage(e) }, errorStatus(e) ?? 404);
     }
 
     const body = await c.req
@@ -112,8 +113,8 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
     let session;
     try {
       session = getOwnedSession(pool, c.req.param('id'), apiKey);
-    } catch (e: any) {
-      return c.json({ error: e.message }, e.status ?? 404);
+    } catch (e) {
+      return c.json({ error: errorMessage(e) }, errorStatus(e) ?? 404);
     }
 
     c.header('Content-Type', 'text/event-stream');
@@ -178,8 +179,8 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
     let session;
     try {
       session = getOwnedSession(pool, c.req.param('id'), apiKey);
-    } catch (e: any) {
-      return c.json({ error: e.message }, e.status ?? 404);
+    } catch (e) {
+      return c.json({ error: errorMessage(e) }, errorStatus(e) ?? 404);
     }
 
     let interval: ReturnType<typeof setInterval> | undefined;

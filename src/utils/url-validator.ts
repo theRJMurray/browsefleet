@@ -1,5 +1,6 @@
 import { lookup } from 'node:dns/promises';
 import { isIPv4, isIPv6 } from 'node:net';
+import { errorMessage } from './errors.js';
 
 /**
  * Validates a URL to prevent SSRF attacks.
@@ -37,9 +38,10 @@ export async function validateUrl(url: string): Promise<void> {
   try {
     const { address } = await lookup(host);
     assertNotPrivateIp(address);
-  } catch (err: any) {
-    if (err.message?.startsWith('Blocked')) throw err;
-    throw new Error(`DNS resolution failed for ${hostname}: ${err.message}`);
+  } catch (err) {
+    const message = errorMessage(err);
+    if (message.startsWith('Blocked')) throw err;
+    throw new Error(`DNS resolution failed for ${hostname}: ${message}`);
   }
 }
 

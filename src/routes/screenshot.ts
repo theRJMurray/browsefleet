@@ -1,4 +1,6 @@
 import { Hono } from 'hono';
+import type { ScreenshotOptions } from 'puppeteer-core';
+import { errorMessage } from '../utils/errors.js';
 import type { BrowserPool } from '../pool/browser-pool.js';
 import type { ScreenshotRequest } from '../types.js';
 import { validateUrl } from '../utils/url-validator.js';
@@ -29,11 +31,12 @@ export function screenshotRoutes(pool: BrowserPool): Hono {
         }
 
         const format = body.format ?? 'png';
-        const opts: any = {
+        const opts: ScreenshotOptions = {
           type: format,
           fullPage: body.fullPage ?? false,
           encoding: 'binary',
         };
+        // Puppeteer rejects `quality` on any format but JPEG, rather than ignoring it.
         if (format === 'jpeg' && body.quality) {
           opts.quality = body.quality;
         }
@@ -53,8 +56,8 @@ export function screenshotRoutes(pool: BrowserPool): Hono {
       const mime =
         body.format === 'jpeg' ? 'image/jpeg' : body.format === 'webp' ? 'image/webp' : 'image/png';
       return new Response(Buffer.from(result), { headers: { 'Content-Type': mime } });
-    } catch (err: any) {
-      return c.json({ error: err.message }, 500);
+    } catch (err) {
+      return c.json({ error: errorMessage(err) }, 500);
     }
   });
 

@@ -1,3 +1,5 @@
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
+
 /**
  * `catch (err)` gives `unknown`, which is correct: a throw site can throw anything, and
  * `catch (err: any)` only hides that by turning every downstream `err.message` into an
@@ -25,11 +27,17 @@ export function errorMessage(err: unknown): string {
  * The HTTP status a thrown value asks for, when it carries one. `getOwnedSession` throws
  * `{ status }` to mean 403 rather than 404, and route handlers need to read that back without
  * asserting the shape.
+ *
+ * Anything outside the 4xx and 5xx range is ignored rather than forwarded. A thrown object
+ * carrying `status: 200` is a bug somewhere upstream, and turning a failure into a success
+ * response is the worst possible way to surface it.
  */
-export function errorStatus(err: unknown): number | undefined {
+export function errorStatus(err: unknown): ContentfulStatusCode | undefined {
   if (err && typeof err === 'object' && 'status' in err) {
     const status = (err as { status: unknown }).status;
-    if (typeof status === 'number') return status;
+    if (typeof status === 'number' && Number.isInteger(status) && status >= 400 && status <= 599) {
+      return status as ContentfulStatusCode;
+    }
   }
   return undefined;
 }

@@ -1,4 +1,15 @@
 import { Hono } from 'hono';
+import { errorMessage, errorStatus } from '../utils/errors.js';
+
+/** 2captcha answers both `in.php` and `res.php` with this shape. */
+type TwoCaptchaResponse = { status: number; request: string };
+
+/** The undeclared global reCAPTCHA registers its widget callbacks on. */
+type GrecaptchaWindow = {
+  ___grecaptcha_cfg?: {
+    clients?: Record<string, Record<string, { callback?: (token: string) => void }>>;
+  };
+};
 import type { BrowserPool } from '../pool/browser-pool.js';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
@@ -17,8 +28,8 @@ export function captchaRoutes(pool: BrowserPool): Hono {
     let session;
     try {
       session = getOwnedSession(pool, c.req.param('id'), apiKey);
-    } catch (e: any) {
-      return c.json({ error: e.message }, e.status ?? 404);
+    } catch (e) {
+      return c.json({ error: errorMessage(e) }, errorStatus(e) ?? 404);
     }
 
     const body = await c.req.json<CaptchaSolveRequest>().catch(() => ({}) as CaptchaSolveRequest);
@@ -63,7 +74,7 @@ export function captchaRoutes(pool: BrowserPool): Hono {
       const createUrl = `https://2captcha.com/in.php?key=${config.CAPTCHA_API_KEY}&method=userrecaptcha&googlekey=${detected.siteKey}&pageurl=${encodeURIComponent(pageUrl)}&json=1`;
 
       const createRes = await fetch(createUrl);
-      const createData = (await createRes.json()) as any;
+      const createData = (await createRes.json()) as TwoCaptchaResponse;
 
       if (createData.status !== 1) {
         return c.json({
@@ -82,7 +93,7 @@ export function captchaRoutes(pool: BrowserPool): Hono {
         await new Promise((r) => setTimeout(r, 5000));
         const resultUrl = `https://2captcha.com/res.php?key=${config.CAPTCHA_API_KEY}&action=get&id=${taskId}&json=1`;
         const resultRes = await fetch(resultUrl);
-        const resultData = (await resultRes.json()) as any;
+        const resultData = (await resultRes.json()) as TwoCaptchaResponse;
 
         if (resultData.status === 1) {
           solution = resultData.request;
@@ -117,10 +128,11 @@ export function captchaRoutes(pool: BrowserPool): Hono {
               textarea.style.display = 'block';
             }
             // Trigger callback
-            if ((window as any).___grecaptcha_cfg?.clients) {
-              for (const client of Object.values(
-                (window as any).___grecaptcha_cfg.clients,
-              ) as any[]) {
+            // reCAPTCHA hangs its client registry off an undeclared global. Reading it back
+            // is the only way to reach the callback the widget would have fired itself.
+            const cfg = (window as unknown as GrecaptchaWindow).___grecaptcha_cfg;
+            if (cfg?.clients) {
+              for (const client of Object.values(cfg.clients)) {
                 for (const key of Object.keys(client)) {
                   const cb = client[key]?.callback;
                   if (typeof cb === 'function') cb(sol);
@@ -142,12 +154,12 @@ export function captchaRoutes(pool: BrowserPool): Hono {
         type: captchaType,
         duration: Date.now() - start,
       } satisfies CaptchaSolveResponse);
-    } catch (err: any) {
+    } catch (err) {
       return c.json({
         success: false,
         type: captchaType,
         duration: Date.now() - start,
-        error: err.message,
+        error: errorMessage(err),
       } satisfies CaptchaSolveResponse);
     }
   });

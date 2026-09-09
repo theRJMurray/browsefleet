@@ -1,4 +1,4 @@
-import type { Page } from 'puppeteer-core';
+import type { KeyInput, Page } from 'puppeteer-core';
 import { SYSTEM_PROMPT, buildUserMessage } from './prompt.js';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
@@ -69,6 +69,10 @@ export interface AgentEvents {
 
 // ─── LLM Providers ─────────────────────────────────────────────────────────
 
+/** Only the fields read back are declared. Both providers return a great deal more. */
+type AnthropicMessagesResponse = { content?: Array<{ text?: string }> };
+type OpenAIChatResponse = { choices?: Array<{ message?: { content?: string } }> };
+
 async function callAnthropic(
   apiKey: string,
   model: string,
@@ -107,7 +111,7 @@ async function callAnthropic(
     throw new Error(`Anthropic API error ${res.status}: ${err}`);
   }
 
-  const data = (await res.json()) as any;
+  const data = (await res.json()) as AnthropicMessagesResponse;
   const text = data.content?.[0]?.text ?? '';
   return parseAgentResponse(text);
 }
@@ -149,7 +153,7 @@ async function callOpenAI(
     throw new Error(`OpenAI API error ${res.status}: ${err}`);
   }
 
-  const data = (await res.json()) as any;
+  const data = (await res.json()) as OpenAIChatResponse;
   const text = data.choices?.[0]?.message?.content ?? '';
   return parseAgentResponse(text);
 }
@@ -198,7 +202,7 @@ async function executeAction(page: Page, action: AgentAction): Promise<void> {
       await page.keyboard.type(action.text, { delay: 30 + Math.random() * 40 });
       break;
     case 'press_key':
-      await page.keyboard.press(action.key as any);
+      await page.keyboard.press(action.key as KeyInput);
       await new Promise((r) => setTimeout(r, 200));
       break;
     case 'scroll':
@@ -270,18 +274,19 @@ export async function runAgent(
     let response: { actions: AgentAction[]; reasoning: string };
     try {
       response = await callLLM(llmApiKey, model, SYSTEM_PROMPT, userMessage, screenshotBuffer);
-    } catch (err: any) {
-      logger.error({ error: err.message, iteration: i }, 'Agent LLM call failed');
+    } catch (err) {
+      const message = errorMessage(err);
+      logger.error({ error: message, iteration: i }, 'Agent LLM call failed');
       steps.push({
         iteration: i,
-        reasoning: `LLM error: ${err.message}`,
+        reasoning: `LLM error: ${message}`,
         actions: [],
         screenshot: screenshotBuffer,
       });
       return {
         success: false,
         failure: 'llm_error',
-        error: err.message,
+        error: message,
         steps,
         totalIterations: i + 1,
       };
@@ -321,8 +326,8 @@ export async function runAgent(
     for (const action of response.actions) {
       try {
         await executeAction(page, action);
-      } catch (err: any) {
-        logger.warn({ action: action.type, error: err.message }, 'Agent action failed');
+      } catch (err) {
+        logger.warn({ action: action.type, error: errorMessage(err) }, 'Agent action failed');
       }
     }
 

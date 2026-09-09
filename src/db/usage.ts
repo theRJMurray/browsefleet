@@ -42,13 +42,24 @@ export function recordSessionStart(
   ).run(key, date);
 }
 
+/**
+ * better-sqlite3 returns `unknown` from `get`/`all`, correctly: it cannot know a query's shape.
+ * These types are the contract between each SELECT above and the code reading it, so changing a
+ * column name breaks the read at compile time rather than at runtime as an undefined.
+ */
+type SessionRow = { api_key: string; created_at: string };
+type CountRow = { c: number };
+type HoursRow = { h: number };
+type DailyTotalsRow = { browser_hours: number; api_calls: number };
+type DailyRow = { date: string; sessions: number; browserHours: number; apiCalls: number };
+
 export function recordSessionEnd(sessionId: string, browserHours: number) {
   const db = getDb();
   const now = new Date().toISOString();
 
   const session = db
     .prepare('SELECT api_key, created_at FROM sessions WHERE id = ?')
-    .get(sessionId) as any;
+    .get(sessionId) as SessionRow | undefined;
   if (!session) return;
 
   const durationMs = new Date(now).getTime() - new Date(session.created_at).getTime();
@@ -99,32 +110,33 @@ export function getUsageStats(apiKey?: string): UsageStats {
   const key = apiKey ?? 'anonymous';
 
   const totalSessions =
-    (db.prepare('SELECT count(*) as c FROM sessions WHERE api_key = ?').get(key) as any)?.c ?? 0;
+    (db.prepare('SELECT count(*) as c FROM sessions WHERE api_key = ?').get(key) as CountRow | undefined)
+      ?.c ?? 0;
 
   const activeSessions =
     (
       db
         .prepare('SELECT count(*) as c FROM sessions WHERE api_key = ? AND status = ?')
-        .get(key, 'active') as any
+        .get(key, 'active') as CountRow | undefined
     )?.c ?? 0;
 
   const totalBrowserHours =
     (
       db
         .prepare('SELECT COALESCE(SUM(browser_hours), 0) as h FROM sessions WHERE api_key = ?')
-        .get(key) as any
+        .get(key) as HoursRow | undefined
     )?.h ?? 0;
 
   const today = new Date().toISOString().slice(0, 10);
   const todayRow = db
     .prepare('SELECT browser_hours, api_calls FROM daily_usage WHERE api_key = ? AND date = ?')
-    .get(key, today) as any;
+    .get(key, today) as DailyTotalsRow | undefined;
 
   const daily = db
     .prepare(
       'SELECT date, sessions_created as sessions, browser_hours as browserHours, api_calls as apiCalls FROM daily_usage WHERE api_key = ? ORDER BY date DESC LIMIT 30',
     )
-    .all(key) as any[];
+    .all(key) as DailyRow[];
 
   return {
     totalSessions,

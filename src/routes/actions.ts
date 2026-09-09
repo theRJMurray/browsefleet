@@ -1,4 +1,6 @@
 import { Hono } from 'hono';
+import type { KeyInput } from 'puppeteer-core';
+import { errorMessage, errorStatus } from '../utils/errors.js';
 import type { BrowserPool } from '../pool/browser-pool.js';
 import type { ActionRequest, ActionResponse } from '../types.js';
 import { validateUrl } from '../utils/url-validator.js';
@@ -12,8 +14,8 @@ export function actionsRoutes(pool: BrowserPool): Hono {
     let session;
     try {
       session = getOwnedSession(pool, c.req.param('id'), apiKey);
-    } catch (e: any) {
-      return c.json({ error: e.message }, e.status ?? 404);
+    } catch (e) {
+      return c.json({ error: errorMessage(e) }, errorStatus(e) ?? 404);
     }
 
     const body = await c.req.json<ActionRequest>().catch(() => null);
@@ -25,8 +27,8 @@ export function actionsRoutes(pool: BrowserPool): Hono {
     if (hasInputAction) {
       try {
         session.assertAgentControl();
-      } catch (e: any) {
-        return c.json({ error: e.message }, e.status ?? 423);
+      } catch (e) {
+        return c.json({ error: errorMessage(e) }, errorStatus(e) ?? 423);
       }
     }
 
@@ -69,7 +71,7 @@ export function actionsRoutes(pool: BrowserPool): Hono {
             break;
           }
           case 'press_key': {
-            await page.keyboard.press(action.key as any);
+            await page.keyboard.press(action.key as KeyInput);
             const ss = session.sensitiveMode
               ? undefined
               : ((await page.screenshot({ encoding: 'base64', type: 'png' })) as string);
@@ -106,13 +108,15 @@ export function actionsRoutes(pool: BrowserPool): Hono {
           }
           default:
             results.push({
-              type: (action as any).type,
+              // `action` is `never` here: every member of the union has a case above. The
+              // cast reads the type back off whatever a client actually sent.
+              type: (action as { type: string }).type,
               success: false,
               error: 'Unknown action type',
             });
         }
-      } catch (err: any) {
-        results.push({ type: action.type, success: false, error: err.message });
+      } catch (err) {
+        results.push({ type: action.type, success: false, error: errorMessage(err) });
       }
     }
 
