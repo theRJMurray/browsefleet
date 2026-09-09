@@ -368,9 +368,15 @@ describe('POST /v1/agent/stream', () => {
 
   it('reports a provider failure as an error carrying the iteration it happened on', async () => {
     vi.unstubAllGlobals();
+    let call = 0;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response('upstream is down', { status: 529 })),
+      vi.fn(async () => {
+        call += 1;
+        return call === 1
+          ? anthropicReply(JSON.stringify({ reasoning: 'looking', actions: [] }))
+          : new Response('upstream is down', { status: 529 });
+      }),
     );
     const { page } = recordingPage();
     const { pool } = fakePool(page);
@@ -378,8 +384,11 @@ describe('POST /v1/agent/stream', () => {
     const res = await agentRoutes(pool).request(streamRequest(request));
     const events = await readEvents(res);
 
+    // The failure is on the second call, not the first, so the expected iteration is 1. A test
+    // that fails on the first call expects 0, which is also what a hardcoded 0, a bare `i`, or
+    // no arithmetic at all would produce.
     const last = events[events.length - 1];
-    expect(last).toMatchObject({ type: 'error', iteration: 0 });
+    expect(last).toMatchObject({ type: 'error', iteration: 1 });
     expect(String(last.error)).toContain('529');
   });
 
@@ -395,8 +404,11 @@ describe('POST /v1/agent/stream', () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ type: 'error' });
     expect(String(events[0].error)).toMatch(/No API key/i);
-    // No `iteration` and no `totalIterations`: nothing ran.
+    // No `iteration` and no `totalIterations`: nothing ran. Both are asserted, because
+    // dropping the `no_api_key` case falls through to the default branch, which would add
+    // `totalIterations: 0` while leaving `iteration` undefined.
     expect(events[0].iteration).toBeUndefined();
+    expect(events[0].totalIterations).toBeUndefined();
   });
 
   it('stops the run when the client hangs up mid-stream', async () => {
@@ -416,11 +428,20 @@ describe('POST /v1/agent/stream', () => {
     await reader.read();
     await reader.cancel();
 
-    // Let the loop notice. Without the signal this settles at 30.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Waiting on the run actually ending, not on a fixed interval. A sleep plus a loose bound
+    // makes the assertion a race against the machine, and the direction it loses in is the
+    // dangerous one: a slower runner does fewer iterations per tick, so a broken loop would
+    // creep back under the bound and the test would go green against the bug it exists to pin.
+    // The session is released in the `finally`, so it fills in immediately when aborted and not
+    // until all 30 iterations are done when not.
+    await vi.waitFor(() => expect(released).toEqual(['sess-1']));
 
-    expect(fetchMock.mock.calls.length).toBeLessThan(5);
-    expect(released).toEqual(['sess-1']);
+    // At most one: the cancel lands while the first model call is already in flight, and that
+    // call is not cancelled (aborting the `fetch` would surface as an AbortError and get
+    // labelled a provider outage). Zero when the cancel wins the race. Thirty when broken, and
+    // the `waitFor` above is what makes that distinction safe on any machine, since a run that
+    // is not aborted does not release its session until every iteration is done.
+    expect(fetchMock.mock.calls.length).toBeLessThanOrEqual(1);
   });
 
   it('rejects a request with no task before creating a session', async () => {

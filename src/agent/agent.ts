@@ -283,6 +283,15 @@ export async function runAgent(
     const screenshotBuffer = (await page.screenshot({ encoding: 'base64', type: 'png' })) as string;
     if (events.onScreenshot) await notify(() => events.onScreenshot!(i, screenshotBuffer));
 
+    // A streaming transport discovers it is dead by trying to write to it, which happens in the
+    // callback just above. Checking here rather than waiting for the next iteration is the
+    // difference between spending one more model call on nobody and spending none.
+    //
+    // Deliberately not passed into the provider `fetch` to cancel a request already in flight:
+    // `fetch` rejects with an AbortError, the catch below would label it `llm_error`, and every
+    // disconnect would be reported as a provider outage.
+    if (events.signal?.aborted) return abandoned(i);
+
     // Build message
     const userMessage = buildUserMessage(request.task, i, maxIterations);
 
