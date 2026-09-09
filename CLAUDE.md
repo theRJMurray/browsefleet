@@ -126,4 +126,6 @@ curl -X POST localhost:3000/v1/screenshot -H 'Content-Type: application/json' -d
 
 ## Domain
 
-browsefleet.com
+No public domain is live. The canonical location is the GitHub repository,
+`github.com/theRJMurray/browsefleet`, and the published image is
+`ghcr.io/therjmurray/browsefleet`.

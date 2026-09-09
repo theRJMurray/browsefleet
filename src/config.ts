@@ -10,6 +10,10 @@ const schema = z.object({
 
   API_KEYS: z.string().default(''),
 
+  // Browser origins allowed to call this instance. Comma-separated, or '*' for any.
+  // Self-hosters serving a browser app from their own domain have to set this.
+  CORS_ORIGINS: z.string().default('http://localhost:3000'),
+
   MAX_CONCURRENT_SESSIONS: z.coerce.number().default(30),
   DEFAULT_SESSION_TIMEOUT: z.coerce.number().default(1_800_000),
   MAX_SESSION_TIMEOUT: z.coerce.number().default(86_400_000),
@@ -40,9 +44,17 @@ const apiKeys = parsed.API_KEYS
       .filter(Boolean)
   : [];
 
+const corsOrigins =
+  parsed.CORS_ORIGINS.trim() === '*'
+    ? '*'
+    : parsed.CORS_ORIGINS.split(',')
+        .map((o) => o.trim())
+        .filter(Boolean);
+
 export const config = {
   ...parsed,
   apiKeys,
+  corsOrigins,
   authEnabled: apiKeys.length > 0,
   dataDir: path.resolve(parsed.DATA_DIR),
   chromePath: parsed.CHROME_PATH || undefined,

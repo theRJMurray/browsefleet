@@ -32,7 +32,7 @@ export function createApp(pool: BrowserPool): Hono {
   app.use(
     '*',
     cors({
-      origin: ['https://browsefleet.com', 'http://localhost:3000'],
+      origin: config.corsOrigins,
       allowHeaders: ['Content-Type', 'x-api-key', 'Authorization'],
     }),
   );
