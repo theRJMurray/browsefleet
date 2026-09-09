@@ -3,6 +3,7 @@ import { SYSTEM_PROMPT, buildUserMessage } from './prompt.js';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import { validateUrl } from '../utils/url-validator.js';
+import { errorMessage } from '../utils/errors.js';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -32,12 +33,38 @@ export type AgentAction =
   | { type: 'done'; result: string }
   | { type: 'fail'; reason: string };
 
+/**
+ * Why a run ended without success. A caller needs this to tell the agent deciding it cannot do
+ * the task apart from the LLM call failing, which are the same `success: false` today and mean
+ * completely different things to whoever is watching.
+ */
+export type AgentFailure = 'agent_fail' | 'llm_error' | 'no_api_key' | 'max_iterations';
+
 export interface AgentResult {
   success: boolean;
   result?: string;
   error?: string;
+  /** Set whenever `success` is false, absent otherwise. */
+  failure?: AgentFailure;
   steps: AgentStep[];
   totalIterations: number;
+}
+
+/**
+ * Progress callbacks, so a streaming transport can report the run as it happens instead of
+ * reimplementing the loop around its own emitter. That reimplementation is exactly what
+ * `POST /v1/agent/stream` used to be, and it drifted: it skipped the `res.ok` check, dropped
+ * the humanized typing delay, turned an unparseable model response into a silent no-op instead
+ * of a failure, and never told the client the run had hit its iteration ceiling.
+ *
+ * A callback that throws is logged and swallowed. A consumer that cannot keep up with its own
+ * event stream is not a reason to abandon a browser session mid-task.
+ */
+export interface AgentEvents {
+  /** Fired once per iteration, with the screenshot the model is about to be shown. */
+  onScreenshot?(iteration: number, screenshot: string): void | Promise<void>;
+  /** Fired after the model responds, with the step just recorded. */
+  onStep?(step: AgentStep): void | Promise<void>;
 }
 
 // ─── LLM Providers ─────────────────────────────────────────────────────────
@@ -189,7 +216,11 @@ async function executeAction(page: Page, action: AgentAction): Promise<void> {
 
 // ─── Agent Loop ────────────────────────────────────────────────────────────
 
-export async function runAgent(page: Page, request: AgentRequest): Promise<AgentResult> {
+export async function runAgent(
+  page: Page,
+  request: AgentRequest,
+  events: AgentEvents = {},
+): Promise<AgentResult> {
   const provider = request.provider ?? 'anthropic';
   const model = request.model ?? (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4o');
   const maxIterations = Math.min(request.maxIterations ?? 15, 30);
@@ -199,11 +230,21 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
   if (!llmApiKey) {
     return {
       success: false,
+      failure: 'no_api_key',
       error: `No API key configured for ${provider}. Set ${provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY'} or pass apiKey in request.`,
       steps: [],
       totalIterations: 0,
     };
   }
+
+  // A subscriber's failure is the subscriber's problem. The run continues.
+  const notify = async (fire: () => void | Promise<void>): Promise<void> => {
+    try {
+      await fire();
+    } catch (err) {
+      logger.warn({ error: errorMessage(err) }, 'Agent event subscriber threw');
+    }
+  };
 
   // Navigate to initial URL if provided
   if (request.url) {
@@ -218,6 +259,7 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
   for (let i = 0; i < maxIterations; i++) {
     // Take screenshot
     const screenshotBuffer = (await page.screenshot({ encoding: 'base64', type: 'png' })) as string;
+    if (events.onScreenshot) await notify(() => events.onScreenshot!(i, screenshotBuffer));
 
     // Build message
     const userMessage = buildUserMessage(request.task, i, maxIterations);
@@ -236,7 +278,13 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
         actions: [],
         screenshot: screenshotBuffer,
       });
-      return { success: false, error: err.message, steps, totalIterations: i + 1 };
+      return {
+        success: false,
+        failure: 'llm_error',
+        error: err.message,
+        steps,
+        totalIterations: i + 1,
+      };
     }
 
     const step: AgentStep = {
@@ -246,6 +294,7 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
       screenshot: screenshotBuffer,
     };
     steps.push(step);
+    if (events.onStep) await notify(() => events.onStep!(step));
 
     logger.info(
       { iteration: i, reasoning: response.reasoning, actionCount: response.actions.length },
@@ -258,7 +307,13 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
         return { success: true, result: action.result, steps, totalIterations: i + 1 };
       }
       if (action.type === 'fail') {
-        return { success: false, error: action.reason, steps, totalIterations: i + 1 };
+        return {
+          success: false,
+          failure: 'agent_fail',
+          error: action.reason,
+          steps,
+          totalIterations: i + 1,
+        };
       }
     }
 
@@ -271,12 +326,15 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
       }
     }
 
-    // Small delay between iterations
-    await new Promise((r) => setTimeout(r, 500));
+    // Let the page settle before the next screenshot.
+    if (config.AGENT_STEP_DELAY_MS > 0) {
+      await new Promise((r) => setTimeout(r, config.AGENT_STEP_DELAY_MS));
+    }
   }
 
   return {
     success: false,
+    failure: 'max_iterations',
     error: `Agent reached maximum iterations (${maxIterations}) without completing the task`,
     steps,
     totalIterations: maxIterations,
