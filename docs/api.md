@@ -293,9 +293,30 @@ Requires `ANTHROPIC_API_KEY` (for `provider:"anthropic"`) or `OPENAI_API_KEY` (f
 
 `maxIterations` defaults to 15 and is clamped to a hard ceiling of 30. Returns an `AgentResult` with the final answer plus a step-by-step trace including screenshots (intermediate screenshots are stripped from the response; only the final iteration keeps one to reduce payload size).
 
+When `success` is `false`, `failure` says why, so a caller can tell the agent giving up apart from the call to the model failing:
+
+| `failure`        | Meaning                                                                                       |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| `agent_fail`     | The model emitted a `fail` action, or answered with something that was not the JSON contract. |
+| `llm_error`      | The provider call failed. `error` carries the status and body.                                |
+| `no_api_key`     | No key was configured or passed for the selected provider. Nothing ran.                       |
+| `max_iterations` | The loop hit its ceiling without a terminal action.                                           |
+
 ### `POST /v1/agent/stream`
 
-Streaming variant that creates an ephemeral session and emits server-sent events as the agent runs. Each event is a JSON object with a `type` field of one of `screenshot`, `step`, `done`, `fail`, or `error`. The session is released automatically when the stream ends.
+Streaming variant that creates an ephemeral session and emits server-sent events as the agent runs. The session is released automatically when the stream ends, including when it ends badly. Closing the connection aborts the run rather than letting it finish for nobody: the loop checks after writing each frame and again after each model call, so a disconnect costs at most the one call already in flight. There is no terminal event for this case and there cannot be, since the transport it would travel on is what went away. Internally the run ends with `failure: "aborted"`, which is why that value is absent from the table above: no caller can observe it.
+
+Each event is a JSON object with a `type` field:
+
+| `type`       | Fields                                                                                                                                                           | When                                                                                                         |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `screenshot` | `iteration`, `screenshot`                                                                                                                                        | Once per iteration, carrying the frame the model is about to be shown.                                       |
+| `step`       | `iteration`, `reasoning`, `actions`                                                                                                                              | After the model responds. A reply that is not the JSON contract appears here as a synthesized `fail` action. |
+| `done`       | `result`, `totalIterations`                                                                                                                                      | The agent completed the task.                                                                                |
+| `fail`       | `reason`, `totalIterations`                                                                                                                                      | The agent decided it could not.                                                                              |
+| `error`      | `error`, plus `iteration` when a model call failed and `totalIterations` when the loop hit its ceiling. Neither when no key was configured, because nothing ran. | The model call failed, no key was configured, the session died, or the loop hit its ceiling.                 |
+
+Exactly one terminal event (`done`, `fail`, or `error`) is emitted before the stream closes. A stream that closes without one means the connection dropped, not that the run finished.
 
 ## Usage
 

@@ -32,6 +32,18 @@ const schema = z.object({
   ANTHROPIC_API_KEY: z.string().default(''),
   OPENAI_API_KEY: z.string().default(''),
 
+  // Pause between agent iterations, to let a page settle after the last batch of actions.
+  // 500ms suits a hosted vision model; a local one is fast enough that the pause dominates
+  // the run, so it is configurable rather than baked in.
+  //
+  // The empty-to-undefined preprocess is load-bearing. `dotenv` sets a bare `KEY=` line to the
+  // empty string, which is present, so zod's default never fires and `z.coerce.number()` turns
+  // it into 0. A blank line in a .env would otherwise silently disable the pause.
+  AGENT_STEP_DELAY_MS: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.coerce.number().min(0).default(500),
+  ),
+
   DATA_DIR: z.string().default('./data'),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
 });

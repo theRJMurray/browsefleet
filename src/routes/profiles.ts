@@ -33,8 +33,8 @@ function listProfiles(): Profile[] {
   if (!existsSync(dir)) return [];
   const entries = readdirSync(dir, { withFileTypes: true });
   return entries
-    .filter((e: any) => e.isDirectory())
-    .map((e: any) => getProfileMeta(e.name))
+    .filter((e) => e.isDirectory())
+    .map((e) => getProfileMeta(e.name))
     .filter(Boolean) as Profile[];
 }
 
@@ -89,16 +89,4 @@ export function profilesRoutes(): Hono {
   });
 
   return app;
-}
-
-// Helpers for session integration
-export function loadProfileCookies(profileId: string): any[] {
-  const path = `${profilesDir()}/${profileId}/cookies.json`;
-  if (!existsSync(path)) return [];
-  return JSON.parse(readFileSync(path, 'utf-8'));
-}
-
-export function saveProfileCookies(profileId: string, cookies: any[]): void {
-  const path = `${profilesDir()}/${profileId}/cookies.json`;
-  writeFileSync(path, JSON.stringify(cookies, null, 2));
 }

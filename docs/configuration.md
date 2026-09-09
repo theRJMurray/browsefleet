@@ -62,10 +62,11 @@ The CDP URL is constructed at session-creation time and returned in the session 
 
 ## AI agent
 
-| Variable            | Default | Description                                                 |
-| ------------------- | ------- | ----------------------------------------------------------- |
-| `ANTHROPIC_API_KEY` | empty   | Anthropic API key for `/v1/agent` tasks that select Claude. |
-| `OPENAI_API_KEY`    | empty   | OpenAI API key for `/v1/agent` tasks that select GPT.       |
+| Variable              | Default | Description                                                                                                                                                                                 |
+| --------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`   | empty   | Anthropic API key for `/v1/agent` tasks that select Claude.                                                                                                                                 |
+| `OPENAI_API_KEY`      | empty   | OpenAI API key for `/v1/agent` tasks that select GPT.                                                                                                                                       |
+| `AGENT_STEP_DELAY_MS` | `500`   | Pause between agent iterations, letting the page settle before the next screenshot. Lower it when driving a fast local model, where the pause otherwise dominates the run. `0` disables it. |
 
 At least one is required if you use the `/v1/agent` endpoint. See [agent](./agent.md).
 

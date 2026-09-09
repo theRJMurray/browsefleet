@@ -3,6 +3,7 @@ import path from 'node:path';
 import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import type { BrowserPool } from '../pool/browser-pool.js';
 import { getOwnedSession } from '../utils/session-auth.js';
+import { errorMessage, errorStatus } from '../utils/errors.js';
 
 export function filesRoutes(pool: BrowserPool): Hono {
   const app = new Hono();
@@ -13,8 +14,8 @@ export function filesRoutes(pool: BrowserPool): Hono {
     let session;
     try {
       session = getOwnedSession(pool, c.req.param('id'), apiKey);
-    } catch (e: any) {
-      return c.json({ error: e.message }, e.status ?? 404);
+    } catch (e) {
+      return c.json({ error: errorMessage(e) }, errorStatus(e) ?? 404);
     }
 
     const body = await c.req.parseBody();
@@ -40,8 +41,8 @@ export function filesRoutes(pool: BrowserPool): Hono {
     let session;
     try {
       session = getOwnedSession(pool, c.req.param('id'), apiKey);
-    } catch (e: any) {
-      return c.json({ error: e.message }, e.status ?? 404);
+    } catch (e) {
+      return c.json({ error: errorMessage(e) }, errorStatus(e) ?? 404);
     }
 
     const uploadDir = `/tmp/bf-uploads-${session.id}`;
@@ -61,8 +62,8 @@ export function filesRoutes(pool: BrowserPool): Hono {
     let session;
     try {
       session = getOwnedSession(pool, c.req.param('id'), apiKey);
-    } catch (e: any) {
-      return c.json({ error: e.message }, e.status ?? 404);
+    } catch (e) {
+      return c.json({ error: errorMessage(e) }, errorStatus(e) ?? 404);
     }
 
     const name = path.basename(c.req.param('name'));

@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { errorMessage } from '../utils/errors.js';
 import type { BrowserPool } from '../pool/browser-pool.js';
 import type { PdfRequest } from '../types.js';
 import { validateUrl } from '../utils/url-validator.js';
@@ -39,8 +40,8 @@ export function pdfRoutes(pool: BrowserPool): Hono {
           'Content-Disposition': 'inline; filename="page.pdf"',
         },
       });
-    } catch (err: any) {
-      return c.json({ error: err.message }, 500);
+    } catch (err) {
+      return c.json({ error: errorMessage(err) }, 500);
     }
   });
 

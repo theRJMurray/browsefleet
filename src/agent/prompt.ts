@@ -28,7 +28,7 @@ export const SYSTEM_PROMPT = `You are a browser automation agent. You control a 
 - If you see a CAPTCHA, return "fail" with reason "CAPTCHA detected"
 - When the task is done, always return "done" with a result description
 - Return 1-3 actions at a time, never more
-- Be precise with click coordinates — estimate based on the element's visual center
+- Be precise with click coordinates. Estimate based on the element's visual center
 
 ## Response Format
 Always respond with valid JSON:

@@ -1,8 +1,9 @@
-import type { Page } from 'puppeteer-core';
+import type { KeyInput, Page } from 'puppeteer-core';
 import { SYSTEM_PROMPT, buildUserMessage } from './prompt.js';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
 import { validateUrl } from '../utils/url-validator.js';
+import { errorMessage } from '../utils/errors.js';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -32,15 +33,57 @@ export type AgentAction =
   | { type: 'done'; result: string }
   | { type: 'fail'; reason: string };
 
+/**
+ * Why a run ended without success. A caller needs this to tell the agent deciding it cannot do
+ * the task apart from the LLM call failing, which are the same `success: false` today and mean
+ * completely different things to whoever is watching.
+ */
+export type AgentFailure = 'agent_fail' | 'llm_error' | 'no_api_key' | 'max_iterations' | 'aborted';
+
 export interface AgentResult {
   success: boolean;
   result?: string;
   error?: string;
+  /** Set whenever `success` is false, absent otherwise. */
+  failure?: AgentFailure;
   steps: AgentStep[];
   totalIterations: number;
 }
 
+/**
+ * Progress callbacks, so a streaming transport can report the run as it happens instead of
+ * reimplementing the loop around its own emitter. That reimplementation is exactly what
+ * `POST /v1/agent/stream` used to be, and it drifted: it skipped the `res.ok` check, flattened
+ * the humanized typing delay to a constant, turned an unparseable model response into a silent
+ * no-op instead of a failure, and never told the client the run had hit its iteration ceiling.
+ *
+ * A callback that throws is logged and the run continues. A subscriber bug is not a reason to
+ * abandon a browser session mid-task. A subscriber that has *gone* is a different thing
+ * entirely, and that is what `signal` is for: swallowing the throw from a dead transport would
+ * otherwise leave the loop calling a vision model for nobody.
+ */
+export interface AgentEvents {
+  /** Fired once per iteration, with the screenshot the model is about to be shown. */
+  onScreenshot?(iteration: number, screenshot: string): void | Promise<void>;
+  /** Fired after the model responds, with the step just recorded. */
+  onStep?(step: AgentStep): void | Promise<void>;
+  /**
+   * Aborts the run. Checked three times per iteration: before the screenshot, again right
+   * after it is handed to `onScreenshot`, and again after the model answers.
+   *
+   * The middle one is where a streaming transport is usually caught, because a dead connection
+   * announces itself by throwing on the write. Catching it there costs no model call at all.
+   * The other two bound the cases it misses: an already-cancelled run never takes a screenshot,
+   * and a cancel landing during the model call costs that one call and no actions.
+   */
+  signal?: AbortSignal;
+}
+
 // ─── LLM Providers ─────────────────────────────────────────────────────────
+
+/** Only the fields read back are declared. Both providers return a great deal more. */
+type AnthropicMessagesResponse = { content?: Array<{ text?: string }> };
+type OpenAIChatResponse = { choices?: Array<{ message?: { content?: string } }> };
 
 async function callAnthropic(
   apiKey: string,
@@ -80,7 +123,7 @@ async function callAnthropic(
     throw new Error(`Anthropic API error ${res.status}: ${err}`);
   }
 
-  const data = (await res.json()) as any;
+  const data = (await res.json()) as AnthropicMessagesResponse;
   const text = data.content?.[0]?.text ?? '';
   return parseAgentResponse(text);
 }
@@ -122,7 +165,7 @@ async function callOpenAI(
     throw new Error(`OpenAI API error ${res.status}: ${err}`);
   }
 
-  const data = (await res.json()) as any;
+  const data = (await res.json()) as OpenAIChatResponse;
   const text = data.choices?.[0]?.message?.content ?? '';
   return parseAgentResponse(text);
 }
@@ -171,7 +214,7 @@ async function executeAction(page: Page, action: AgentAction): Promise<void> {
       await page.keyboard.type(action.text, { delay: 30 + Math.random() * 40 });
       break;
     case 'press_key':
-      await page.keyboard.press(action.key as any);
+      await page.keyboard.press(action.key as KeyInput);
       await new Promise((r) => setTimeout(r, 200));
       break;
     case 'scroll':
@@ -189,7 +232,11 @@ async function executeAction(page: Page, action: AgentAction): Promise<void> {
 
 // ─── Agent Loop ────────────────────────────────────────────────────────────
 
-export async function runAgent(page: Page, request: AgentRequest): Promise<AgentResult> {
+export async function runAgent(
+  page: Page,
+  request: AgentRequest,
+  events: AgentEvents = {},
+): Promise<AgentResult> {
   const provider = request.provider ?? 'anthropic';
   const model = request.model ?? (provider === 'anthropic' ? 'claude-sonnet-4-20250514' : 'gpt-4o');
   const maxIterations = Math.min(request.maxIterations ?? 15, 30);
@@ -199,11 +246,21 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
   if (!llmApiKey) {
     return {
       success: false,
+      failure: 'no_api_key',
       error: `No API key configured for ${provider}. Set ${provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY'} or pass apiKey in request.`,
       steps: [],
       totalIterations: 0,
     };
   }
+
+  // A subscriber's failure is the subscriber's problem. The run continues.
+  const notify = async (fire: () => void | Promise<void>): Promise<void> => {
+    try {
+      await fire();
+    } catch (err) {
+      logger.warn({ error: errorMessage(err) }, 'Agent event subscriber threw');
+    }
+  };
 
   // Navigate to initial URL if provided
   if (request.url) {
@@ -215,9 +272,30 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
   const steps: AgentStep[] = [];
   const callLLM = provider === 'anthropic' ? callAnthropic : callOpenAI;
 
+  /** The caller has gone. Stop where we are rather than paying for the rest of the run. */
+  const abandoned = (iterations: number): AgentResult => ({
+    success: false,
+    failure: 'aborted',
+    error: 'Run aborted before completion',
+    steps,
+    totalIterations: iterations,
+  });
+
   for (let i = 0; i < maxIterations; i++) {
+    if (events.signal?.aborted) return abandoned(i);
+
     // Take screenshot
     const screenshotBuffer = (await page.screenshot({ encoding: 'base64', type: 'png' })) as string;
+    if (events.onScreenshot) await notify(() => events.onScreenshot!(i, screenshotBuffer));
+
+    // A streaming transport discovers it is dead by trying to write to it, which happens in the
+    // callback just above. Checking here rather than waiting for the next iteration is the
+    // difference between spending one more model call on nobody and spending none.
+    //
+    // Deliberately not passed into the provider `fetch` to cancel a request already in flight:
+    // `fetch` rejects with an AbortError, the catch below would label it `llm_error`, and every
+    // disconnect would be reported as a provider outage.
+    if (events.signal?.aborted) return abandoned(i);
 
     // Build message
     const userMessage = buildUserMessage(request.task, i, maxIterations);
@@ -228,15 +306,22 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
     let response: { actions: AgentAction[]; reasoning: string };
     try {
       response = await callLLM(llmApiKey, model, SYSTEM_PROMPT, userMessage, screenshotBuffer);
-    } catch (err: any) {
-      logger.error({ error: err.message, iteration: i }, 'Agent LLM call failed');
+    } catch (err) {
+      const message = errorMessage(err);
+      logger.error({ error: message, iteration: i }, 'Agent LLM call failed');
       steps.push({
         iteration: i,
-        reasoning: `LLM error: ${err.message}`,
+        reasoning: `LLM error: ${message}`,
         actions: [],
         screenshot: screenshotBuffer,
       });
-      return { success: false, error: err.message, steps, totalIterations: i + 1 };
+      return {
+        success: false,
+        failure: 'llm_error',
+        error: message,
+        steps,
+        totalIterations: i + 1,
+      };
     }
 
     const step: AgentStep = {
@@ -246,6 +331,7 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
       screenshot: screenshotBuffer,
     };
     steps.push(step);
+    if (events.onStep) await notify(() => events.onStep!(step));
 
     logger.info(
       { iteration: i, reasoning: response.reasoning, actionCount: response.actions.length },
@@ -258,25 +344,39 @@ export async function runAgent(page: Page, request: AgentRequest): Promise<Agent
         return { success: true, result: action.result, steps, totalIterations: i + 1 };
       }
       if (action.type === 'fail') {
-        return { success: false, error: action.reason, steps, totalIterations: i + 1 };
+        return {
+          success: false,
+          failure: 'agent_fail',
+          error: action.reason,
+          steps,
+          totalIterations: i + 1,
+        };
       }
     }
+
+    // Checked again here because the model call above can take many seconds, which is the
+    // window a client is most likely to disappear in. Actions have side effects on a real
+    // page, so not running them is worth the extra check.
+    if (events.signal?.aborted) return abandoned(i + 1);
 
     // Execute non-terminal actions
     for (const action of response.actions) {
       try {
         await executeAction(page, action);
-      } catch (err: any) {
-        logger.warn({ action: action.type, error: err.message }, 'Agent action failed');
+      } catch (err) {
+        logger.warn({ action: action.type, error: errorMessage(err) }, 'Agent action failed');
       }
     }
 
-    // Small delay between iterations
-    await new Promise((r) => setTimeout(r, 500));
+    // Let the page settle before the next screenshot.
+    if (config.AGENT_STEP_DELAY_MS > 0) {
+      await new Promise((r) => setTimeout(r, config.AGENT_STEP_DELAY_MS));
+    }
   }
 
   return {
     success: false,
+    failure: 'max_iterations',
     error: `Agent reached maximum iterations (${maxIterations}) without completing the task`,
     steps,
     totalIterations: maxIterations,

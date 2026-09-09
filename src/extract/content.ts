@@ -30,7 +30,7 @@ export function extractContent(html: string, url: string) {
     }
   });
 
-  // Cleaned HTML — remove scripts, styles, hidden elements
+  // Cleaned HTML, with scripts, styles and hidden elements removed
   const cleanDoc = new JSDOM(html, { url }).window.document;
   cleanDoc
     .querySelectorAll('script, style, noscript, iframe, svg, link[rel="stylesheet"]')

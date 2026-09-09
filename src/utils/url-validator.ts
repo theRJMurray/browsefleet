@@ -1,5 +1,6 @@
 import { lookup } from 'node:dns/promises';
 import { isIPv4, isIPv6 } from 'node:net';
+import { errorMessage } from './errors.js';
 
 /**
  * Validates a URL to prevent SSRF attacks.
@@ -37,9 +38,10 @@ export async function validateUrl(url: string): Promise<void> {
   try {
     const { address } = await lookup(host);
     assertNotPrivateIp(address);
-  } catch (err: any) {
-    if (err.message?.startsWith('Blocked')) throw err;
-    throw new Error(`DNS resolution failed for ${hostname}: ${err.message}`);
+  } catch (err) {
+    const message = errorMessage(err);
+    if (message.startsWith('Blocked')) throw err;
+    throw new Error(`DNS resolution failed for ${hostname}: ${message}`);
   }
 }
 
@@ -118,7 +120,9 @@ function isPrivateIpv6(ip: string): boolean {
   const nat64 = h[0] === 0x64 && h[1] === 0xff9b && z(2, 6);
   const compatible = z(0, 6);
   if (mapped || translatable || nat64 || compatible) {
-    return isPrivateIpv4(`${(h[6] >> 8) & 0xff}.${h[6] & 0xff}.${(h[7] >> 8) & 0xff}.${h[7] & 0xff}`);
+    return isPrivateIpv4(
+      `${(h[6] >> 8) & 0xff}.${h[6] & 0xff}.${(h[7] >> 8) & 0xff}.${h[7] & 0xff}`,
+    );
   }
 
   return false;
