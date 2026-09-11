@@ -1,6 +1,4 @@
 import { Hono } from 'hono';
-import path from 'node:path';
-import { existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import type { BrowserPool } from '../pool/browser-pool.js';
 import { getOwnedSession } from '../utils/session-auth.js';
 import { errorMessage, errorStatus } from '../utils/errors.js';
@@ -25,14 +23,13 @@ export function filesRoutes(pool: BrowserPool): Hono {
       return c.json({ error: 'file field is required (multipart)' }, 400);
     }
 
-    const dir = `/tmp/bf-uploads-${session.id}`;
-    mkdirSync(dir, { recursive: true });
-
-    const safeName = path.basename(file.name);
-    const buffer = Buffer.from(await file.arrayBuffer());
-    writeFileSync(`${dir}/${safeName}`, buffer);
-
-    return c.json({ uploaded: safeName, size: buffer.length });
+    try {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      session.files.write(file.name, buffer);
+      return c.json({ uploaded: file.name, size: buffer.length });
+    } catch (error) {
+      return c.json({ error: errorMessage(error) }, errorStatus(error) ?? 500);
+    }
   });
 
   // List files
@@ -45,15 +42,11 @@ export function filesRoutes(pool: BrowserPool): Hono {
       return c.json({ error: errorMessage(e) }, errorStatus(e) ?? 404);
     }
 
-    const uploadDir = `/tmp/bf-uploads-${session.id}`;
-    const downloadDir = `/tmp/bf-downloads-${session.id}`;
-
-    const files: string[] = [];
-    if (existsSync(uploadDir)) files.push(...readdirSync(uploadDir).map((f) => `uploads/${f}`));
-    if (existsSync(downloadDir))
-      files.push(...readdirSync(downloadDir).map((f) => `downloads/${f}`));
-
-    return c.json({ files });
+    try {
+      return c.json({ files: session.files.list() });
+    } catch (error) {
+      return c.json({ error: errorMessage(error) }, errorStatus(error) ?? 500);
+    }
   });
 
   // Download file
@@ -66,23 +59,21 @@ export function filesRoutes(pool: BrowserPool): Hono {
       return c.json({ error: errorMessage(e) }, errorStatus(e) ?? 404);
     }
 
-    const name = path.basename(c.req.param('name'));
-
-    // Check uploads first, then downloads
-    for (const dir of [`/tmp/bf-uploads-${session.id}`, `/tmp/bf-downloads-${session.id}`]) {
-      const path = `${dir}/${name}`;
-      if (existsSync(path)) {
-        const data = readFileSync(path);
-        return new Response(data, {
+    const name = c.req.param('name');
+    try {
+      const data = session.files.read(name);
+      if (data) {
+        return new Response(new Uint8Array(data), {
           headers: {
             'Content-Type': 'application/octet-stream',
-            'Content-Disposition': `attachment; filename="${name}"`,
+            'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(name)}`,
           },
         });
       }
+      return c.json({ error: 'File not found' }, 404);
+    } catch (error) {
+      return c.json({ error: errorMessage(error) }, errorStatus(error) ?? 500);
     }
-
-    return c.json({ error: 'File not found' }, 404);
   });
 
   return app;

@@ -1,5 +1,7 @@
 import type { Browser, Page } from 'puppeteer-core';
 import type { Session, CreateSessionRequest, SessionControlMode } from '../types.js';
+import { SessionFiles, validateSessionId } from './session-files.js';
+import { logger } from '../logger.js';
 import { config } from '../config.js';
 
 export class BrowserSession {
@@ -12,6 +14,8 @@ export class BrowserSession {
   readonly timeout: number;
   readonly apiKey: string | undefined;
 
+  readonly files = new SessionFiles();
+  private cleanup: Promise<void> | undefined;
   private releasedAt: Date | undefined;
   private expiryTimer: ReturnType<typeof setTimeout>;
   private _status: 'active' | 'released' | 'expired' | 'error' = 'active';
@@ -28,6 +32,7 @@ export class BrowserSession {
     onExpire: () => void,
     apiKey?: string,
   ) {
+    validateSessionId(id);
     this.id = id;
     this.browser = browser;
     this.cdpEndpoint = cdpEndpoint;
@@ -44,7 +49,11 @@ export class BrowserSession {
     this.expiresAt = new Date(this.createdAt.getTime() + this.timeout);
 
     this.expiryTimer = setTimeout(() => {
+      if (this._status !== 'active') return;
       this._status = 'expired';
+      void this.release().catch((error) =>
+        logger.error({ error, sessionId: this.id }, 'Expired session cleanup failed'),
+      );
       this.onExpire();
     }, this.timeout);
   }
@@ -135,11 +144,22 @@ export class BrowserSession {
   }
 
   async release(): Promise<void> {
-    if (this._status !== 'active') return;
-    this._status = 'released';
+    if (this.cleanup) return this.cleanup;
+    if (this._status === 'active') this._status = 'released';
     this.releasedAt = new Date();
     clearTimeout(this.expiryTimer);
-    await this.browser.close().catch(() => {});
+    try {
+      this.files.dispose();
+    } catch (error) {
+      logger.error({ error, sessionId: this.id }, 'Session storage cleanup failed');
+    }
+    this.cleanup = Promise.resolve()
+      .then(() => this.browser.close())
+      .catch((error) => {
+        this.cleanup = undefined;
+        throw error;
+      });
+    return this.cleanup;
   }
 
   getBrowserHours(): number {
