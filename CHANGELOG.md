@@ -4,6 +4,14 @@ All notable changes to BrowseFleet are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2](https://github.com/theRJMurray/browsefleet/compare/v1.0.1...v1.0.2) (2026-09-11)
+
+
+### Bug Fixes
+
+* **cors:** make allowed origins configurable instead of hardcoding a dead domain ([8b7843a](https://github.com/theRJMurray/browsefleet/commit/8b7843a4b3583cf63946ccba598b1ca2ab6a39c5))
+* **pool:** retain lifecycle ownership through cleanup and admission ([#25](https://github.com/theRJMurray/browsefleet/issues/25)) ([01595f2](https://github.com/theRJMurray/browsefleet/commit/01595f21a9df6660784802ccaa46e14cbd5b31f8))
+
 ## [1.0.1](https://github.com/theRJMurray/browsefleet/compare/v1.0.0...v1.0.1) (2026-05-26)
 
 
