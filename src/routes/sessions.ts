@@ -17,7 +17,10 @@ export function sessionsRoutes(pool: BrowserPool): Hono {
       return c.json(session.toApiObject(), 201);
     } catch (err) {
       const message = errorMessage(err);
-      return c.json({ error: message }, message.includes('Maximum') ? 429 : 500);
+      return c.json(
+        { error: message },
+        errorStatus(err) ?? (message.includes('Maximum') ? 429 : 500),
+      );
     }
   });
 
